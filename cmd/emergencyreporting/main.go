@@ -88,6 +88,9 @@ func doApparatusGet(client *emergencyreporting.Client, args []string) {
 	}
 	filter := args[0]
 	args = args[1:]
+	if len(args) > 0 {
+		panic("Too many arguments")
+	}
 
 	var currentApparatus *emergencyreporting.Apparatus
 	{
@@ -130,11 +133,35 @@ func doIncident(client *emergencyreporting.Client, args []string) {
 	args = args[1:]
 
 	switch action {
+	case "create":
+		doIncidentCreate(client, args)
 	case "get":
 		doIncidentGet(client, args)
 	default:
 		panic("Bad action: " + action)
 	}
+}
+
+func doIncidentCreate(client *emergencyreporting.Client, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: incident JSON")
+	}
+	jsonString := args[0]
+	args = args[1:]
+	if len(args) > 0 {
+		panic("Too many arguments")
+	}
+
+	var incident emergencyreporting.Incident
+	err := json.Unmarshal([]byte(jsonString), &incident)
+	if err != nil {
+		panic(fmt.Errorf("Could not parse JSON: %v", err))
+	}
+	postIncidentResponse, err := client.PostIncident(incident)
+	if err != nil {
+		panic(fmt.Errorf("Could not create incident: %v", err))
+	}
+	spew.Dump(postIncidentResponse)
 }
 
 func doIncidentGet(client *emergencyreporting.Client, args []string) {
@@ -143,6 +170,9 @@ func doIncidentGet(client *emergencyreporting.Client, args []string) {
 	}
 	filter := args[0]
 	args = args[1:]
+	if len(args) > 0 {
+		panic("Too many arguments")
+	}
 
 	var currentIncident *emergencyreporting.Incident
 	{
@@ -184,6 +214,9 @@ func doStationGet(client *emergencyreporting.Client, args []string) {
 	}
 	filter := args[0]
 	args = args[1:]
+	if len(args) > 0 {
+		panic("Too many arguments")
+	}
 
 	var currentStation *emergencyreporting.Station
 	{
@@ -302,120 +335,4 @@ func doUserList(client *emergencyreporting.Client, args []string) {
 		panic(err)
 	}
 	spew.Dump(usersResponse.Users)
-}
-
-func listStations(client *emergencyreporting.Client) map[string]*emergencyreporting.Station {
-	stationsResponse, err := client.GetStations(nil)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Stations: %d\n", len(stationsResponse.Stations))
-	for stationIndex, station := range stationsResponse.Stations {
-		fmt.Printf("Station %d / %d:\n", stationIndex+1, len(stationsResponse.Stations))
-		spew.Dump(station)
-	}
-
-	result := map[string]*emergencyreporting.Station{}
-	for _, station := range stationsResponse.Stations {
-		result[station.StationNumber] = station
-	}
-	return result
-}
-
-func listApparatuses(client *emergencyreporting.Client) map[string]*emergencyreporting.Apparatus {
-	options := map[string]string{
-		"limit": "100",
-	}
-	apparatusesResponse, err := client.GetApparatuses(options)
-	if err != nil {
-		panic(err)
-	}
-
-	result := map[string]*emergencyreporting.Apparatus{}
-	for _, apparatus := range apparatusesResponse.Apparatuses {
-		result[apparatus.ApparatusID] = apparatus
-	}
-	return result
-}
-
-func listSomeIncidents(client *emergencyreporting.Client) {
-	incidents, err := client.GetIncidents(map[string]string{"limit": "4"}, true)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Incidents: %d\n", len(incidents.Incidents))
-	for incidentIndex, incident := range incidents.Incidents {
-		fmt.Printf("Incident %d / %d:\n", incidentIndex+1, len(incidents.Incidents))
-		spew.Dump(incident)
-	}
-}
-
-func makeAnIncident(client *emergencyreporting.Client, desiredIncident emergencyreporting.Incident) {
-	var currentIncident *emergencyreporting.Incident
-	{
-		incidentsResponse, err := client.GetIncidents(map[string]string{"filter": "dispatchRunNumber eq " + desiredIncident.DispatchRunNumber}, true)
-		if err != nil {
-			panic(err)
-		}
-		if len(incidentsResponse.Incidents) > 0 {
-			currentIncident = incidentsResponse.Incidents[0]
-		}
-	}
-	if currentIncident != nil {
-		fmt.Printf("We already have incident %s in the system.\n", desiredIncident.DispatchRunNumber)
-	} else {
-		fmt.Printf("We do not have incident %s in the system.\n", desiredIncident.DispatchRunNumber)
-		newIncident, err := client.PostIncident(desiredIncident)
-		if err != nil {
-			panic(err)
-		}
-		spew.Dump(newIncident)
-
-		incidentsResponse, err := client.GetIncidents(map[string]string{"filter": "dispatchRunNumber eq " + desiredIncident.DispatchRunNumber}, false)
-		if err != nil {
-			panic(err)
-		}
-		if len(incidentsResponse.Incidents) > 0 {
-			currentIncident = incidentsResponse.Incidents[0]
-		}
-	}
-	spew.Dump(currentIncident)
-
-	for desiredExposureIndex, desiredExposure := range desiredIncident.Exposures {
-		var currentExposure *emergencyreporting.Exposure
-		newExposure := false
-		if len(currentIncident.Exposures) >= desiredExposureIndex+1 {
-			fmt.Printf("We already have exposure #%d.\n", desiredExposureIndex+1)
-			currentExposure = currentIncident.Exposures[desiredExposureIndex]
-		} else {
-			fmt.Printf("We need to make exposure #%d.\n", desiredExposureIndex+1)
-			postExposureResponse, err := client.PostExposure(currentIncident.IncidentID, *desiredExposure)
-			if err != nil {
-				panic(err)
-			}
-			getExposureResponse, err := client.GetExposure(currentIncident.IncidentID, postExposureResponse.ExposureID, true)
-			if err != nil {
-				panic(err)
-			}
-			currentExposure = getExposureResponse.Exposure
-
-			newExposure = true
-			desiredExposure.Location.RowVersion = currentExposure.Location.RowVersion
-		}
-		spew.Dump(currentExposure)
-
-		if newExposure {
-			_, err := client.PutExposureLocation(currentExposure.ExposureID, *desiredExposure.Location)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		for _, desiredApparatus := range desiredExposure.Apparatuses {
-			_, err := client.PostExposureApparatus(currentExposure.ExposureID, *desiredApparatus)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
 }

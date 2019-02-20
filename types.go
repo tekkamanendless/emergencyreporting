@@ -1,6 +1,12 @@
 package emergencyreporting
 
 type ErrorResponse struct {
+	Errors []struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+type ErrorResponseBuggy struct {
 	Errors struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`

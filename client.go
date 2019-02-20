@@ -90,17 +90,39 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 	fmt.Printf("%s %s %d %d\n", method, targetURL, response.StatusCode, len(contents))
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		var errorResponse ErrorResponse
-		err = json.Unmarshal(contents, &errorResponse)
-		if err != nil || errorResponse.Errors.Type == "" {
+		var errorType string
+		var errorMessage string
+		{
+			var errorResponse ErrorResponse
+			err = json.Unmarshal(contents, &errorResponse)
+			if err != nil {
+				// Oh well.
+			} else {
+				if len(errorResponse.Errors) > 0 {
+					errorType = errorResponse.Errors[0].Type
+					errorMessage = errorResponse.Errors[0].Message
+				}
+			}
+		}
+		if errorType == "" {
+			var errorResponse ErrorResponseBuggy
+			err = json.Unmarshal(contents, &errorResponse)
+			if err != nil {
+				// Oh well.
+			} else {
+				errorType = errorResponse.Errors.Type
+				errorMessage = errorResponse.Errors.Message
+			}
+		}
+		if err != nil || errorType == "" {
 			fmt.Printf("Error: %s\n", string(contents))
 			return fmt.Errorf("Bad status code: %d", response.StatusCode)
 		}
-		switch errorResponse.Errors.Type {
+		switch errorType {
 		case "Duplicate":
 			return ErrorDuplicate
 		default:
-			return fmt.Errorf("Error type: %s (%s); status code: %d", errorResponse.Errors.Type, errorResponse.Errors.Message, response.StatusCode)
+			return fmt.Errorf("Error type: %s (%s); status code: %d", errorType, errorMessage, response.StatusCode)
 		}
 	}
 
