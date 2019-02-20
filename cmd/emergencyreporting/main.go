@@ -56,6 +56,8 @@ func main() {
 		doApparatus(client, args)
 	case "incident":
 		doIncident(client, args)
+	case "station":
+		doStation(client, args)
 	case "user":
 		doUser(client, args)
 	default:
@@ -157,6 +159,63 @@ func doIncidentGet(client *emergencyreporting.Client, args []string) {
 	} else {
 		spew.Dump(currentIncident)
 	}
+}
+
+func doStation(client *emergencyreporting.Client, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: action")
+	}
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "get":
+		doStationGet(client, args)
+	case "list":
+		doStationList(client, args)
+	default:
+		panic("Bad action: " + action)
+	}
+}
+
+func doStationGet(client *emergencyreporting.Client, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: filter (example: 'stationNumber eq 2'")
+	}
+	filter := args[0]
+	args = args[1:]
+
+	var currentStation *emergencyreporting.Station
+	{
+		apparatusesResponse, err := client.GetStations(map[string]string{"filter": filter})
+		if err != nil {
+			panic(err)
+		}
+		if len(apparatusesResponse.Stations) > 0 {
+			currentStation = apparatusesResponse.Stations[0]
+		}
+	}
+	if currentStation == nil {
+		fmt.Printf("Station not found.\n")
+		return
+	} else {
+		spew.Dump(currentStation)
+	}
+}
+
+func doStationList(client *emergencyreporting.Client, args []string) {
+	if len(args) != 0 {
+		panic("Too many arguments")
+	}
+
+	options := map[string]string{
+		"limit": "100",
+	}
+	stationsResponse, err := client.GetStations(options)
+	if err != nil {
+		panic(err)
+	}
+	spew.Dump(stationsResponse.Stations)
 }
 
 func doUser(client *emergencyreporting.Client, args []string) {

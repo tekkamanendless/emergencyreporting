@@ -9,6 +9,9 @@ import (
 	"net/url"
 )
 
+// ErrorDuplicate represents a duplicate key error.
+var ErrorDuplicate = fmt.Errorf("Duplicate")
+
 type Client struct {
 	Username        string `json:"username"`
 	Password        string `json:"password"`
@@ -87,8 +90,18 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 	fmt.Printf("%s %s %d %d\n", method, targetURL, response.StatusCode, len(contents))
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		fmt.Printf("Error: %s\n", string(contents))
-		return fmt.Errorf("Bad status code: %d", response.StatusCode)
+		var errorResponse ErrorResponse
+		err = json.Unmarshal(contents, &errorResponse)
+		if err != nil || errorResponse.Errors.Type == "" {
+			fmt.Printf("Error: %s\n", string(contents))
+			return fmt.Errorf("Bad status code: %d", response.StatusCode)
+		}
+		switch errorResponse.Errors.Type {
+		case "Duplicate":
+			return ErrorDuplicate
+		default:
+			return fmt.Errorf("Error type: %s (%s); status code: %d", errorResponse.Errors.Type, errorResponse.Errors.Message, response.StatusCode)
+		}
 	}
 
 	if targetPointer != nil {

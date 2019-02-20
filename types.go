@@ -1,5 +1,12 @@
 package emergencyreporting
 
+type ErrorResponse struct {
+	Errors struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+
 type GenerateTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -218,6 +225,7 @@ type GetUsersResponse struct {
 	Users []*User `json:"users"`
 }
 
+// TODO: MAKE THIS THE CORRECT TYPE
 type UserContactInfo map[string]interface{}
 
 type GetUserContactInfoResponse struct {
