@@ -292,10 +292,29 @@ func (c *Client) PostExposure(incidentID string, exposure Exposure) (*PostExposu
 
 	err = c.internalRequest(http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create the incident: %v", err)
+		return nil, fmt.Errorf("Could not create the exposure: %v", err)
 	}
 
 	return &parsedResponse, nil
+}
+
+// DeleteExposure TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDAndExposureIDDelete?
+func (c *Client) DeleteExposure(incidentID string, exposureID string) error {
+	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
+	if err != nil {
+		return fmt.Errorf("Could not delete the exposure: %v", err)
+	}
+
+	return nil
 }
 
 // GetExposureLocation TODO

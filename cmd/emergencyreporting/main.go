@@ -170,9 +170,6 @@ func doIncidentGet(client *emergencyreporting.Client, args []string) {
 	}
 	filter := args[0]
 	args = args[1:]
-	if len(args) > 0 {
-		panic("Too many arguments")
-	}
 
 	var currentIncident *emergencyreporting.Incident
 	{
@@ -186,8 +183,81 @@ func doIncidentGet(client *emergencyreporting.Client, args []string) {
 	}
 	if currentIncident == nil {
 		fmt.Printf("Incident not found.\n")
-	} else {
-		spew.Dump(currentIncident)
+		return
+	}
+
+	spew.Dump(currentIncident)
+
+	if len(args) == 0 {
+		return
+	}
+
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "exposure":
+		doIncidentExposure(client, currentIncident.IncidentID, args)
+	default:
+		panic("Bad action: " + action)
+	}
+}
+
+func doIncidentExposure(client *emergencyreporting.Client, incidentID string, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: action")
+	}
+
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "get":
+		doIncidentExposureGet(client, incidentID, args)
+	default:
+		panic("Bad action: " + action)
+	}
+}
+
+func doIncidentExposureGet(client *emergencyreporting.Client, incidentID string, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: filter (example: 'exposureID eq 1234'")
+	}
+	filter := args[0]
+	args = args[1:]
+
+	var currentExposure *emergencyreporting.Exposure
+	{
+		exposuresResponse, err := client.GetExposures(incidentID, map[string]string{"filter": filter}, true)
+		if err != nil {
+			panic(err)
+		}
+		if len(exposuresResponse.Exposures) > 0 {
+			currentExposure = exposuresResponse.Exposures[0]
+		}
+	}
+	if currentExposure == nil {
+		fmt.Printf("Exposure not found.\n")
+		return
+	}
+
+	spew.Dump(currentExposure)
+
+	if len(args) == 0 {
+		return
+	}
+
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "delete":
+		err := client.DeleteExposure(incidentID, currentExposure.ExposureID)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		panic("Bad action: " + action)
 	}
 }
 
