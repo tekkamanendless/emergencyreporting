@@ -409,6 +409,40 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 	return &parsedResponse, nil
 }
 
+// GetExposureMembers TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresCrewmembersByExposureIDGet?
+func (c *Client) GetExposureMembers(exposureID string, options map[string]string) (*GetExposureMembersResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers[?rowVersion][&limit][&offset][&filter][&orderby]
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers"
+
+	var parsedResponse GetExposureMembersResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the exposure: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
+// GetExposureMemberRoles TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/CrewmembersRolesByExposureUserIDGet?
+func (c *Client) GetExposureMemberRoles(exposureID string, exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/crewmembers/{exposureUserID}/roles[?rowVersion][&limit][&offset][&filter][&orderby]
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/crewmembers/" + url.PathEscape(exposureUserID) + "/roles"
+
+	var parsedResponse GetExposureMemberRolesResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the exposure: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
 // GetUsers TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersGet?
 func (c *Client) GetUsers(options map[string]string, deep bool) (*GetUsersResponse, error) {

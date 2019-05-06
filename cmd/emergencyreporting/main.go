@@ -256,9 +256,84 @@ func doIncidentExposureGet(client *emergencyreporting.Client, incidentID string,
 		if err != nil {
 			panic(err)
 		}
+	case "members":
+		doExposureMembers(client, currentExposure.ExposureID, args)
 	default:
 		panic("Bad action: " + action)
 	}
+}
+
+func doExposureMembers(client *emergencyreporting.Client, exposureID string, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: action")
+	}
+
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "get":
+		doExposureMembersGet(client, exposureID, args)
+	case "list":
+		doExposureMembersList(client, exposureID, args)
+	default:
+		panic("Bad action: " + action)
+	}
+}
+
+func doExposureMembersGet(client *emergencyreporting.Client, exposureID string, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: filter (example: 'exposureID eq 1234'")
+	}
+	filter := args[0]
+	args = args[1:]
+
+	var currentMember *emergencyreporting.CrewMember
+	{
+		membersResponse, err := client.GetExposureMembers(exposureID, map[string]string{"filter": filter})
+		if err != nil {
+			panic(err)
+		}
+		if len(membersResponse.CrewMembers) > 0 {
+			currentMember = membersResponse.CrewMembers[0]
+		}
+	}
+	if currentMember == nil {
+		fmt.Printf("Member not found.\n")
+		return
+	}
+
+	spew.Dump(currentMember)
+
+	if len(args) == 0 {
+		return
+	}
+
+	action := args[0]
+	args = args[1:]
+
+	switch action {
+	case "roles":
+		rolesResponse, err := client.GetExposureMemberRoles(exposureID, currentMember.ExposureUserID, nil)
+		if err != nil {
+			panic(err)
+		}
+		spew.Dump(rolesResponse.Roles)
+	default:
+		panic("Bad action: " + action)
+	}
+}
+
+func doExposureMembersList(client *emergencyreporting.Client, exposureID string, args []string) {
+	if len(args) > 0 {
+		panic("Unexpected arguments")
+	}
+
+	membersResponse, err := client.GetExposureMembers(exposureID, nil)
+	if err != nil {
+		panic(err)
+	}
+	spew.Dump(membersResponse.CrewMembers)
 }
 
 func doStation(client *emergencyreporting.Client, args []string) {

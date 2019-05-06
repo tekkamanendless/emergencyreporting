@@ -204,6 +204,29 @@ type GetExposureNarrativesResponse struct {
 	Narratives []*ExposureNarrative `json:"exposureNarrative"`
 }
 
+type CrewMember struct {
+	UserID         string `json:"userID"`
+	ApparatusID    string `json:"apparatusID"`
+	ExposureID     string `json:"exposureID"`
+	ExposureUserID string `json:"exposureUserID"`
+	RowVersion     string `json:"rowVersion"`
+}
+
+type GetExposureMembersResponse struct {
+	CrewMembers []*CrewMember `json:"crewMembers"`
+}
+
+type CrewMemberRole struct {
+	ExposureUserRoleID string `json:"exposureUserRoleID"`
+	ExposureID         string `json:"exposureID"`
+	NFIRSCode          string `json:"nfirsCode"`
+	RowVersion         string `json:"rowVersion"`
+}
+
+type GetExposureMemberRolesResponse struct {
+	Roles []*CrewMemberRole `json:"roles"`
+}
+
 // Note: "rowNum" (string) is the 1-index of the entry; might be tacked on to all array responses?
 
 type User struct {
