@@ -406,6 +406,8 @@ func doUser(client *emergencyreporting.Client, args []string) {
 	switch action {
 	case "get":
 		doUserGet(client, args)
+	case "id":
+		doUserID(client, args)
 	case "list":
 		doUserList(client, args)
 	default:
@@ -433,40 +435,67 @@ func doUserGet(client *emergencyreporting.Client, args []string) {
 	if currentUser == nil {
 		fmt.Printf("User not found.\n")
 		return
-	} else {
-		spew.Dump(currentUser)
+	}
+	spew.Dump(currentUser)
+
+	doUserActions(client, currentUser, args)
+}
+
+func doUserID(client *emergencyreporting.Client, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: userID")
+	}
+	userID := args[0]
+	args = args[1:]
+
+	var currentUser *emergencyreporting.User
+	{
+		userResponse, err := client.GetUser(userID, true)
+		if err != nil {
+			panic(err)
+		}
+		currentUser = userResponse.User
+	}
+	if currentUser == nil {
+		fmt.Printf("User not found.\n")
+		return
+	}
+	spew.Dump(currentUser)
+
+	doUserActions(client, currentUser, args)
+}
+
+func doUserActions(client *emergencyreporting.Client, currentUser *emergencyreporting.User, args []string) {
+	if len(args) == 0 {
+		return
 	}
 
-	// ---
+	action := args[0]
+	args = args[1:]
 
-	if len(args) > 0 {
-		action := args[0]
-		args = args[1:]
-
-		switch action {
-		case "patch":
-			if len(args) != 3 {
-				panic("Patch needs three arguments")
-			}
-			operation := args[0]
-			path := args[1]
-			value := args[2]
-
-			patchUserRequest := emergencyreporting.PatchUserRequest{
-				{
-					Operation: operation,
-					Path:      path,
-					Value:     value,
-				},
-			}
-			patchResponse, err := client.PatchUser(currentUser.UserID, currentUser.RowVersion, patchUserRequest)
-			if err != nil {
-				panic(err)
-			}
-			spew.Dump(patchResponse)
-		default:
-			panic("Unsupported action: " + action)
+	switch action {
+	case "patch":
+		if len(args) != 3 {
+			panic("Patch needs three arguments")
 		}
+		operation := args[0]
+		path := args[1]
+		value := args[2]
+
+		patchUserRequest := emergencyreporting.PatchUserRequest{
+			{
+				Operation: operation,
+				Path:      path,
+				Value:     value,
+			},
+		}
+		patchResponse, err := client.PatchUser(currentUser.UserID, currentUser.RowVersion, patchUserRequest)
+		if err != nil {
+			panic(err)
+		}
+		spew.Dump(patchResponse)
+	default:
+		panic("Unsupported action: " + action)
 	}
 }
 

@@ -472,6 +472,35 @@ func (c *Client) GetUsers(options map[string]string, deep bool) (*GetUsersRespon
 	return &parsedResponse, nil
 }
 
+// GetUser TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersByUserIDGet?
+func (c *Client) GetUser(userID string, deep bool) (*GetUserResponse, error) {
+	// https://data.emergencyreporting.com/agencyusers/users/{userID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyusers/users/" + url.PathEscape(userID)
+
+	options := map[string]string{}
+	headers := map[string]string{}
+
+	var parsedResponse GetUserResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the user: %v", err)
+	}
+
+	if deep {
+		user := parsedResponse.User
+		getUserContactInfoResponse, err := c.GetUserContactInfo(user.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("Could not get user contact info for user ID %s: %v", user.UserID, err)
+		}
+		user.ContactInfo = &getUserContactInfoResponse.ContactInfo
+	}
+
+	return &parsedResponse, nil
+}
+
 // GetExposureApparatuses TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersContactinfoByUserIDGet?
 func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse, error) {

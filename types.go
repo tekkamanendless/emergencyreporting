@@ -254,6 +254,10 @@ type GetUsersResponse struct {
 	Users []*User `json:"users"`
 }
 
+type GetUserResponse struct {
+	User *User `json:"user"`
+}
+
 // TODO: MAKE THIS THE CORRECT TYPE
 type UserContactInfo map[string]interface{}
 
