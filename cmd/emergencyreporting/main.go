@@ -137,6 +137,8 @@ func doIncident(client *emergencyreporting.Client, args []string) {
 		doIncidentCreate(client, args)
 	case "get":
 		doIncidentGet(client, args)
+	case "list":
+		doIncidentList(client, args)
 	default:
 		panic("Bad action: " + action)
 	}
@@ -201,6 +203,24 @@ func doIncidentGet(client *emergencyreporting.Client, args []string) {
 	default:
 		panic("Bad action: " + action)
 	}
+}
+
+func doIncidentList(client *emergencyreporting.Client, args []string) {
+	if len(args) == 0 {
+		panic("Missing argument: filter (example: 'dispatchRunNumber eq 1234'")
+	}
+	filter := args[0]
+	args = args[1:]
+
+	if len(args) > 0 {
+		panic("Extra arguments")
+	}
+
+	incidentsResponse, err := client.GetIncidents(map[string]string{"filter": filter}, true)
+	if err != nil {
+		panic(err)
+	}
+	spew.Dump(incidentsResponse.Incidents)
 }
 
 func doIncidentExposure(client *emergencyreporting.Client, incidentID string, args []string) {
