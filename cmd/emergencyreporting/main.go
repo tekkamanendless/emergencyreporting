@@ -79,13 +79,14 @@ Example filter: 'apparatusID eq 21-7'
 			Use:   "get <filter> [exposure ...]",
 			Short: "Get an incident",
 			Long: `
-Addition sub-commands for a particular incident:
+Additional sub-commands for a particular incident:
 * exposure get <filter>
 * exposure get <filter> delete
-* exposure get <filter> members get <filter>
-* exposure get <filter> members list
+* exposure get <filter> exposure <filter> delete
+* exposure get <filter> exposure <filter> members get <filter>
+* exposure get <filter> exposure <filter> members list
 `,
-			Args: cobra.ExactArgs(1),
+			Args: cobra.MinimumNArgs(1),
 			Run:  doIncidentGet,
 		}
 		command.AddCommand(subCommand)
@@ -310,6 +311,11 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 	args = args[1:]
 
 	switch action {
+	case "delete":
+		err := client.DeleteIncident(currentIncident.IncidentID)
+		if err != nil {
+			panic(err)
+		}
 	case "exposure":
 		doIncidentExposure(client, currentIncident.IncidentID, args)
 	default:

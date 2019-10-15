@@ -207,6 +207,25 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 	return &parsedResponse, nil
 }
 
+// DeleteIncident TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/deleteIncident?
+func (c *Client) DeleteIncident(incidentID string) error {
+	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID)
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
+	if err != nil {
+		return fmt.Errorf("Could not delete the incident: %v", err)
+	}
+
+	return nil
+}
+
 // GetExposures TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDGet?
 func (c *Client) GetExposures(incidentID string, options map[string]string, deep bool) (*GetExposuresResponse, error) {
