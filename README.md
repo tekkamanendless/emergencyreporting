@@ -1,4 +1,9 @@
 # Emergency Reporting
+Client for the Emergency Reporting API.
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/tekkamanendless/emergencyreporting)](https://goreportcard.com/report/github.com/tekkamanendless/emergencyreporting)
+[![GoDoc](https://godoc.org/github.com/tekkamanendless/emergencyreporting?status.svg)](https://godoc.org/github.com/tekkamanendless/emergencyreporting)
+
 TODO TODO TODO THIS IS SUPER NOT DONE YET
 
 This is basically an Emergency Reporting client package that also comes with a command line tool.
