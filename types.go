@@ -156,6 +156,45 @@ type PutExposureLocationResponse struct {
 	RowVersion string `json:"rowVersion"`
 }
 
+type ExposureFire struct {
+	CauseOfIgnition                    *string `json:"causeOfIgnition"`
+	NumberOfResidentialUnits           *string `json:"numberOfResidentialUnits"`
+	NumberOfBuildingsInvolved          *string `json:"numberOfBuildingsInvolved"`
+	AcresBurned                        *string `json:"acresBurned"`
+	ResidentialUnitsPresent            string  `json:"residentialUnitsPresent"`
+	BuildingsInvolved                  string  `json:"buildingsInvolved"`
+	LessThanOneAcreBurned              *string `json:"lessThanOneAcreBurned"`
+	OnSiteMaterialsPresent             string  `json:"onSiteMaterialsPresent"`
+	PrimaryOnSiteMaterial              *string `json:"primaryOnSiteMaterial"`
+	PrimaryOnSiteMaterialStorageType   *string `json:"primaryOnSiteMaterialStorageType"`
+	SecondaryOnSiteMaterial            *string `json:"secondaryOnSiteMaterial"`
+	SecondaryOnSiteMaterialStorageType *string `json:"secondaryOnSiteMaterialStorageType"`
+	ThirdOnSiteMaterial                *string `json:"thirdOnSiteMaterial"`
+	ThirdOnSiteMaterialStorageType     *string `json:"thirdOnSiteMaterialStorageType"`
+	AreaOfFireOrigin                   *string `json:"areaOfFireOrigin"`
+	HeatSource                         *string `json:"heatSource"`
+	ItemFirstIgnited                   *string `json:"itemFirstIgnited"`
+	ConfinedToObjectOfOrigin           *string `json:"confinedToObjectOfOrigin"`
+	PrimaryContributingFactor          *string `json:"primaryContributingFactor"`
+	SecondaryContributingFactor        *string `json:"secondaryContributingFactor"`
+	NoContributingHumanFactors         *string `json:"noContributingHumanFactors"`
+	PossibleAlcoholOrDrugImpairment    *string `json:"possibleAlcoholOrDrugImpairment"`
+	MentalDisabilityPresent            *string `json:"mentalDisabilityPresent"`
+	AgeWasAFactor                      *string `json:"ageWasAFactor"`
+	EstimatedAgeOfPersonInvolved       *string `json:"estimatedAgeOfPersonInvolved"`
+	GenderOfPersonInvolved             *string `json:"genderOfPersonInvolved"`
+	PersonInvolvedWasAsleep            *string `json:"personInvolvedWasAsleep"`
+	UnattendedPerson                   *string `json:"unattendedPerson"`
+	PhysicalDisabilityPresent          *string `json:"physicalDisabilityPresent"`
+	MultiplePersonsInvolved            *string `json:"multiplePersonsInvolved"`
+	ExposureID                         string  `json:"exposureID"`
+	RowVersion                         string  `json:"rowVersion"`
+}
+
+type GetExposureFireResponse struct {
+	ExposureFire ExposureFire `json:"exposureFire"`
+}
+
 type ExposureApparatus struct {
 	ApparatusID                     string  `json:"apparatusID"`
 	AlarmDateTime                   string  `json:"alarmDateTime"`

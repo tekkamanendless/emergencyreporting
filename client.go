@@ -12,6 +12,9 @@ import (
 // ErrorDuplicate represents a duplicate key error.
 var ErrorDuplicate = fmt.Errorf("Duplicate")
 
+// ErrorNotFound represents a 404 "not found" error.
+var ErrorNotFound = fmt.Errorf("NotFound")
+
 type Client struct {
 	Username        string `json:"username"`
 	Password        string `json:"password"`
@@ -115,6 +118,10 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 			}
 		}
 		if err != nil || errorType == "" {
+			if response.StatusCode == http.StatusNotFound {
+				return ErrorNotFound
+			}
+
 			fmt.Printf("Error: %s\n", string(contents))
 			return fmt.Errorf("Bad status code: %d", response.StatusCode)
 		}
@@ -125,6 +132,7 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 			return fmt.Errorf("Error type: %s (%s); status code: %d", errorType, errorMessage, response.StatusCode)
 		}
 	}
+	// DEBUG: fmt.Printf("%s\n", contents)
 
 	if targetPointer != nil {
 		err = json.Unmarshal(contents, targetPointer)
@@ -376,6 +384,26 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 	err = c.internalRequest(http.MethodPut, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not put the exposure: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
+// GetExposureFire TODO
+// See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresFireByExposureIDGet?
+func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/fire[?rowVersion][&limit][&offset][&filter][&orderby]
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/fire"
+
+	var parsedResponse GetExposureFireResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	if err != nil {
+		if err == ErrorNotFound {
+			return nil, err
+		}
+		return nil, fmt.Errorf("Could not get the exposure: %v", err)
 	}
 
 	return &parsedResponse, nil
