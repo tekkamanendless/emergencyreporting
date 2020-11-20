@@ -21,6 +21,13 @@ type GenerateTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// GenerateTokenResponseV2 is the new token response structure.
+type GenerateTokenResponseV2 struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   string `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+}
+
 type Station struct {
 	RowNum                  string  `json:"rowNum"`
 	StationID               string  `json:"stationID"`

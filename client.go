@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -42,6 +43,8 @@ type Client struct {
 	ClientSecret    string `json:"client_secret"`
 	AccountID       string `json:"account_id"`       // (New password authentication) This is the user's account ID.
 	UserID          string `json:"user_id"`          // (New password authentication) This is the user's ID.
+	TenantHost      string `json:"tenant_host"`      // (New password authentication) If present, use this instead of the default value.
+	TenantSegment   string `json:"tenant_segment"`   // (New password authentication) If present, use this instead of the default value.
 	Token           string `json:"token"`            // Required, but can be generated using the username, etc.
 	SubscriptionKey string `json:"subscription_key"` // Required no matter what.
 	Logger          Logger // This is the Logger instance to use.  If empty, then the default one will be used.
@@ -78,6 +81,13 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 			tenantSegment = "loginrc.emergencyreporting.com"
 		}
 
+		if c.TenantHost != "" {
+			tenantHost = c.TenantHost
+		}
+		if c.TenantSegment != "" {
+			tenantSegment = c.TenantSegment
+		}
+
 		targetURL = "https://" + tenantHost + "/" + tenantSegment + "/B2C_1A_PasswordGrant/oauth2/v2.0/token"
 
 		values.Set("scope", "https://"+tenantSegment+"/secure/full_access")
@@ -103,10 +113,27 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 		return nil, fmt.Errorf("Bad status code: %d", response.StatusCode)
 	}
 
+	// DEBUG:
+	//c.Logger.Printf("%s\n", contents)
+	// :GUBED
+
 	var parsedResponse GenerateTokenResponse
-	err = json.Unmarshal(contents, &parsedResponse)
-	if err != nil {
-		return nil, fmt.Errorf("Could not parse JSON: %v", err)
+	if c.AccountID != "" && c.UserID != "" {
+		var newResponse GenerateTokenResponseV2
+		err = json.Unmarshal(contents, &newResponse)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse JSON: %v", err)
+		}
+
+		parsedResponse.AccessToken = newResponse.AccessToken
+		parsedResponse.TokenType = newResponse.TokenType
+		expiresIn, _ := strconv.ParseInt(newResponse.ExpiresIn, 10, 64)
+		parsedResponse.ExpiresIn = int(expiresIn)
+	} else {
+		err = json.Unmarshal(contents, &parsedResponse)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse JSON: %v", err)
+		}
 	}
 
 	return &parsedResponse, nil

@@ -15,6 +15,8 @@ Create a JSON file with your login and app information:
 {
 	"username": "YOUR USERNAME",
 	"password": "YOUR PASSWORD",
+	"account_id": "ER ACCOUNT ID",
+	"user_id": "ER USER ID",
 	"client_id": "YOUR CLIENT ID/APP NAME",
 	"client_secret": "YOUR CLIENT SECRET",
 	"subscription_key": "YOUR SUBSCRIPTION KEY"
@@ -25,4 +27,17 @@ Then run:
 
 ```
 emergencyreporting -config /path/to/config.json ...
+```
+
+### Examples
+Get a token:
+
+```
+emergencyreporting -config /path/to/config.json login
+```
+
+Raw operation to get the current user:
+
+```
+emergencyreporting -config /path/to/config.json raw get https://data.emergencyreporting.com/agencyusers/v2/users/me
 ```

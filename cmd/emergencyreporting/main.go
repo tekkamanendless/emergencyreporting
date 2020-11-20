@@ -32,6 +32,16 @@ This tool talks to the EmergencyReporting REST API.
 
 	{
 		command := &cobra.Command{
+			Use:   "login",
+			Short: "Log in and get a token",
+			Long:  ``,
+			Run:   doLogin,
+		}
+		rootCommand.AddCommand(command)
+	}
+
+	{
+		command := &cobra.Command{
 			Use:   "raw",
 			Short: "raw sub-command",
 			Long:  `Perform a raw API operation.`,
@@ -258,6 +268,11 @@ func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
 	}
 
 	return client
+}
+
+func doLogin(cmd *cobra.Command, args []string) {
+	client := makeClient(cmd)
+	fmt.Printf("Token: %s", client.Token)
 }
 
 func doRaw(cmd *cobra.Command, args []string, method string, parameters []string, headers []string, contents string) {
