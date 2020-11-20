@@ -62,6 +62,34 @@ func (c *Client) init() {
 func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 	c.init()
 
+	goLiveDate, _ := time.Parse("2006-01-02", "2020-12-06")
+	if !time.Now().After(goLiveDate) {
+		response, err := c.GenerateTokenLegacy()
+		if err == nil {
+			return response, nil
+		}
+		if c.AccountID == "" || c.UserID == "" {
+			return nil, err
+		}
+	}
+
+	response, err := c.GenerateToken2020()
+	if err != nil {
+		return nil, err
+	}
+
+	var returnValue GenerateTokenResponse
+	returnValue.AccessToken = response.AccessToken
+	returnValue.TokenType = response.TokenType
+	expiresIn, _ := strconv.ParseInt(response.ExpiresIn, 10, 64)
+	returnValue.ExpiresIn = int(expiresIn)
+
+	return &returnValue, nil
+}
+
+func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
+	c.init()
+
 	targetURL := "https://auth.emergencyreporting.com/Token.php"
 	values := url.Values{
 		"grant_type":    {"password"},
@@ -69,31 +97,6 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 		"password":      {c.Password},
 		"client_id":     {c.ClientID},
 		"client_secret": {c.ClientSecret},
-	}
-
-	if c.AccountID != "" && c.UserID != "" {
-		tenantHost := "login.emergencyreporting.com"
-		tenantSegment := "login.emergencyreporting.com"
-
-		goLiveDate, _ := time.Parse("2006-01-02", "2020-12-06")
-		if time.Now().Before(goLiveDate) {
-			tenantHost = "loginrc.emergencyreporting.com"
-			tenantSegment = "loginrc.emergencyreporting.com"
-		}
-
-		if c.TenantHost != "" {
-			tenantHost = c.TenantHost
-		}
-		if c.TenantSegment != "" {
-			tenantSegment = c.TenantSegment
-		}
-
-		targetURL = "https://" + tenantHost + "/" + tenantSegment + "/B2C_1A_PasswordGrant/oauth2/v2.0/token"
-
-		values.Set("scope", "https://"+tenantSegment+"/secure/full_access")
-		values.Set("response_type", "token")
-		values.Set("er_aid", c.AccountID)
-		values.Set("er_uid", c.UserID)
 	}
 
 	c.Logger.Printf("POST %s\n", targetURL)
@@ -118,22 +121,72 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 	// :GUBED
 
 	var parsedResponse GenerateTokenResponse
-	if c.AccountID != "" && c.UserID != "" {
-		var newResponse GenerateTokenResponseV2
-		err = json.Unmarshal(contents, &newResponse)
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse JSON: %v", err)
-		}
+	err = json.Unmarshal(contents, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse JSON: %v", err)
+	}
 
-		parsedResponse.AccessToken = newResponse.AccessToken
-		parsedResponse.TokenType = newResponse.TokenType
-		expiresIn, _ := strconv.ParseInt(newResponse.ExpiresIn, 10, 64)
-		parsedResponse.ExpiresIn = int(expiresIn)
-	} else {
-		err = json.Unmarshal(contents, &parsedResponse)
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse JSON: %v", err)
-		}
+	return &parsedResponse, nil
+}
+
+func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
+	c.init()
+
+	tenantHost := "login.emergencyreporting.com"
+	tenantSegment := "login.emergencyreporting.com"
+
+	goLiveDate, _ := time.Parse("2006-01-02", "2020-12-06")
+	if time.Now().Before(goLiveDate) {
+		tenantHost = "loginrc.emergencyreporting.com"
+		tenantSegment = "loginrc.emergencyreporting.com"
+	}
+
+	if c.TenantHost != "" {
+		tenantHost = c.TenantHost
+	}
+	if c.TenantSegment != "" {
+		tenantSegment = c.TenantSegment
+	}
+
+	targetURL := "https://" + tenantHost + "/" + tenantSegment + "/B2C_1A_PasswordGrant/oauth2/v2.0/token"
+
+	values := url.Values{
+		"grant_type":    {"password"},
+		"username":      {c.Username},
+		"password":      {c.Password},
+		"client_id":     {c.ClientID},
+		"client_secret": {c.ClientSecret},
+		"scope":         {"https://" + tenantSegment + "/secure/full_access"},
+		"response_type": {"token"},
+		"er_aid":        {c.AccountID},
+		"er_uid":        {c.UserID},
+	}
+
+	c.Logger.Printf("POST %s\n", targetURL)
+	response, err := c.client.PostForm(targetURL, values)
+	if err != nil {
+		return nil, fmt.Errorf("Could not post form: %v", err)
+	}
+	defer response.Body.Close()
+
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read body: %v", err)
+	}
+
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		c.Logger.Printf("Body: %v\n", string(contents))
+		return nil, fmt.Errorf("Bad status code: %d", response.StatusCode)
+	}
+
+	// DEBUG:
+	//c.Logger.Printf("%s\n", contents)
+	// :GUBED
+
+	var parsedResponse GenerateTokenResponseV2
+	err = json.Unmarshal(contents, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse JSON: %v", err)
 	}
 
 	return &parsedResponse, nil
