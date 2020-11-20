@@ -58,18 +58,19 @@ type GetStationsResponse struct {
 }
 
 type Incident struct {
-	StationID             string      `json:"stationID"`
-	State                 string      `json:"state"`
-	IncidentDateTime      string      `json:"incidentDateTime"`
-	FDID                  string      `json:"fdid"`
-	IncidentNumber        string      `json:"incidentNumber"`
-	PartnerIncidentNumber string      `json:"partnerIncidentNumber"`
-	DispatchRunNumber     string      `json:"dispatchRunNumber"`
-	IsComplete            string      `json:"isComplete"`
-	IsReviewed            string      `json:"isReviewed"`
-	IncidentID            string      `json:"incidentID,omitempty"` // Not used for creating incidents.
-	RowVersion            string      `json:"rowVersion,omitempty"` // Not used for creating incidents.
-	Exposures             []*Exposure `json:"-"`
+	StationID             string `json:"stationID"`
+	State                 string `json:"state"`
+	IncidentDateTime      string `json:"incidentDateTime"`
+	FDID                  string `json:"fdid"`
+	IncidentNumber        string `json:"incidentNumber"`
+	PartnerIncidentNumber string `json:"partnerIncidentNumber"`
+	DispatchRunNumber     string `json:"dispatchRunNumber"`
+	IsComplete            string `json:"isComplete"`
+	IsReviewed            string `json:"isReviewed"`
+	IncidentID            string `json:"incidentID,omitempty"` // Not used for creating incidents.
+	RowVersion            string `json:"rowVersion,omitempty"` // Not used for creating incidents.
+
+	Exposures []*Exposure `json:"-"`
 }
 
 type GetIncidentsResponse struct {
@@ -81,35 +82,36 @@ type PostIncidentResponse struct {
 }
 
 type Exposure struct {
-	ShiftsOrPlatoon                string               `json:"shiftsOrPlatoon"`
-	IncidentType                   string               `json:"incidentType"`
-	AssignedToUserID               string               `json:"assignedToUserID"`
-	AidGivenOrReceived             string               `json:"aidGivenOrReceived"`
-	HazmatReleased                 string               `json:"hazmatReleased"`
-	PrimaryActionTaken             string               `json:"primaryActionTaken"`
-	SecondaryActionTaken           string               `json:"secondaryActionTaken"`
-	ThirdActionTaken               string               `json:"thirdActionTaken"`
-	CompletedByUserID              string               `json:"completedByUserID"`
-	ReviewedByUserID               string               `json:"reviewedByUserID"`
-	CompletedDateTime              string               `json:"completedDateTime"`
-	ReviewedDateTime               string               `json:"reviewedDateTime"`
-	PSAPDateTime                   string               `json:"psapDateTime"`
-	DispatchNotifiedDateTime       string               `json:"dispatchNotifiedDateTime"`
-	InitialResponderDateTime       string               `json:"initialResponderDateTime"`
-	HasPropertyLoss                string               `json:"hasPropertyLoss"`
-	PropertyLossAmount             string               `json:"propertyLossAmount"`
-	HasContentLoss                 string               `json:"hasContentLoss"`
-	ContentLossAmount              string               `json:"contentLossAmount"`
-	HasPreIncidentPropertyValue    string               `json:"hasPreIncidentPropertyValue"`
-	PreIncidentPropertyValueAmount string               `json:"preIncidentPropertyValueAmount"`
-	HasPreIncidentContentsValue    string               `json:"hasPreIncidentContentsValue"`
-	PreIncidentContentsValueAmount string               `json:"preIncidentContentsValueAmount"`
-	CompaintReportedByDispatch     string               `json:"complaintReportedByDispatch"`
-	ExposureID                     string               `json:"exposureID,omitempty"`
-	RowVersion                     string               `json:"rowVersion,omitempty"`
-	Location                       *ExposureLocation    `json:"-"`
-	Apparatuses                    []*ExposureApparatus `json:"-"`
-	Narratives                     []*ExposureNarrative `json:"-"`
+	ShiftsOrPlatoon                string `json:"shiftsOrPlatoon"`
+	IncidentType                   string `json:"incidentType"`
+	AssignedToUserID               string `json:"assignedToUserID"`
+	AidGivenOrReceived             string `json:"aidGivenOrReceived"`
+	HazmatReleased                 string `json:"hazmatReleased"`
+	PrimaryActionTaken             string `json:"primaryActionTaken"`
+	SecondaryActionTaken           string `json:"secondaryActionTaken"`
+	ThirdActionTaken               string `json:"thirdActionTaken"`
+	CompletedByUserID              string `json:"completedByUserID"`
+	ReviewedByUserID               string `json:"reviewedByUserID"`
+	CompletedDateTime              string `json:"completedDateTime"`
+	ReviewedDateTime               string `json:"reviewedDateTime"`
+	PSAPDateTime                   string `json:"psapDateTime"`
+	DispatchNotifiedDateTime       string `json:"dispatchNotifiedDateTime"`
+	InitialResponderDateTime       string `json:"initialResponderDateTime"`
+	HasPropertyLoss                string `json:"hasPropertyLoss"`
+	PropertyLossAmount             string `json:"propertyLossAmount"`
+	HasContentLoss                 string `json:"hasContentLoss"`
+	ContentLossAmount              string `json:"contentLossAmount"`
+	HasPreIncidentPropertyValue    string `json:"hasPreIncidentPropertyValue"`
+	PreIncidentPropertyValueAmount string `json:"preIncidentPropertyValueAmount"`
+	HasPreIncidentContentsValue    string `json:"hasPreIncidentContentsValue"`
+	PreIncidentContentsValueAmount string `json:"preIncidentContentsValueAmount"`
+	CompaintReportedByDispatch     string `json:"complaintReportedByDispatch"`
+	ExposureID                     string `json:"exposureID,omitempty"`
+	RowVersion                     string `json:"rowVersion,omitempty"`
+
+	Location    *ExposureLocation    `json:"-"`
+	Apparatuses []*ExposureApparatus `json:"-"`
+	Narratives  []*ExposureNarrative `json:"-"`
 }
 
 type GetExposuresResponse struct {
@@ -269,24 +271,59 @@ type GetExposureMemberRolesResponse struct {
 // Note: "rowNum" (string) is the 1-index of the entry; might be tacked on to all array responses?
 
 type User struct {
-	RowNum                   string           `json:"rowNum,omitempty"`
-	AgencyPersonnelID        *string          `json:"agencyPersonnelID"`
-	Email                    *string          `json:"email"`
-	RoleName                 string           `json:"roleName"`
-	UserID                   string           `json:"userID"`
-	Title                    *string          `json:"title"`
-	FullName                 string           `json:"fullName"`
-	Login                    string           `json:"login"`
-	Archive                  string           `json:"Archive"`
-	PrimaryEmail             string           `json:"primaryEmail"`
-	CertificationStatus      string           `json:"certificationStatus"`
-	RoleID                   string           `json:"roleID"`
-	DefaultEventPaygradeName *string          `json:"defaultEventPaygradeName"`
-	DefaultEventPaygradeRate *string          `json:"defaultEventPaygradeRate"`
-	Station                  *string          `json:"station"`
-	Shift                    *string          `json:"shift"`
-	RowVersion               string           `json:"rowVersion"`
-	ContactInfo              *UserContactInfo `json:"-"`
+	RowNum                   string        `json:"rowNum,omitempty"`
+	AgencyPersonnelID        *string       `json:"agencyPersonnelID"`
+	Email                    *string       `json:"email"`
+	RoleName                 string        `json:"roleName"`
+	UserID                   string        `json:"userID"`
+	Title                    *string       `json:"title"`
+	FullName                 string        `json:"fullName"`
+	Login                    string        `json:"login"`
+	Archive                  string        `json:"Archive"`
+	PrimaryEmail             string        `json:"primaryEmail"`
+	CertificationStatus      string        `json:"certificationStatus"`
+	RoleID                   string        `json:"roleID"`
+	DefaultEventPaygradeName *string       `json:"defaultEventPaygradeName"`
+	DefaultEventPaygradeRate *string       `json:"defaultEventPaygradeRate"`
+	Station                  *string       `json:"station"`
+	Shift                    *string       `json:"shift"`
+	RowVersion               string        `json:"rowVersion"`
+	Licenses                 []interface{} `json:"licenses"` // TODO: Figure out what this is.
+
+	ContactInfo *UserContactInfo `json:"-"`
+}
+
+// CurrentUser represents the "current" user (special user ID of "me").
+type CurrentUser struct {
+	User
+	AccountID               string            `json:"accountID"`
+	MyProfileAccessLevel    string            `json:"myProfileAccessLevel"`
+	CACRequired             string            `json:"cacRequired"`
+	FirstName               string            `json:"firstName"`
+	LastName                string            `json:"lastName"`
+	FireMarshalAccessLevel  string            `json:"fireMarshalAccessLevel"`
+	Permissions             map[string]string `json:"permissions"`
+	AdminAccessLevel        string            `json:"adminAccessLevel"`
+	AnalyticsAccessLevel    string            `json:"analyticsAccessLevel"`
+	CalendarAccessLevel     string            `json:"calendarAccessLevel"`
+	DaybookAccessLevel      string            `json:"daybookAccessLevel"`
+	DemographicsAccessLevel string            `json:"demographicsAccessLevel"`
+	EventsAccessLevel       string            `json:"eventsAccessLevel"`
+	HydrantsAccessLevel     string            `json:"hydrantsAccessLevel"`
+	InventoryAccessLevel    string            `json:"inventoryAccessLevel"`
+	InvoicingAccessLevel    string            `json:"invoicingAccessLevel"`
+	LibraryAccessLevel      string            `json:"libraryAccessLevel"`
+	MaintenanceAccessLevel  string            `json:"maintenanceAccessLevel"`
+	MessageAccessLevel      string            `json:"messageAccessLevel"`
+	NFIRSAccessLevel        string            `json:"nfirsAccessLevel"`
+	NHTSAAccessLevel        string            `json:"nhtsaAccessLevel"`
+	OccupancyAccessLevel    string            `json:"occupancyAccessLevel"`
+	PayrollAccessLevel      string            `json:"payrollAccessLevel"`
+	ReportsAccessLevel      string            `json:"reportsAccessLevel"`
+	RosterAccessLevel       string            `json:"rosterAccessLevel"`
+	ShiftAccessLevel        string            `json:"shiftAccessLevel"`
+	TrainingAccessLevel     string            `json:"trainingAccessLevel"`
+	ClientID                string            `json:"client_id"`
 }
 
 type GetUsersResponse struct {

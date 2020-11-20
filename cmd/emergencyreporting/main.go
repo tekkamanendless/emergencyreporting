@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	"github.com/tekkamanendless/emergencyreporting"
 )
@@ -28,6 +29,37 @@ This tool talks to the EmergencyReporting REST API.
 	}
 	rootCommand.PersistentFlags().String("config", "config.json", "Path to the configuration file with the client credentials.")
 	rootCommand.PersistentFlags().Int("limit", 100, "The page size for any queries.")
+
+	{
+		command := &cobra.Command{
+			Use:   "raw",
+			Short: "raw sub-command",
+			Long:  `Perform a raw API operation.`,
+			Run:   nil,
+		}
+		rootCommand.AddCommand(command)
+
+		for _, method := range []string{http.MethodDelete, http.MethodGet, http.MethodPost, http.MethodPatch} {
+			func(method string) {
+				var parameters []string
+				var headers []string
+				var contents string
+				subCommand := &cobra.Command{
+					Use:   fmt.Sprintf("%s <url>", strings.ToLower(method)),
+					Short: fmt.Sprintf("Perform a %s operation", method),
+					Long:  ``,
+					Args:  cobra.ExactArgs(1),
+					Run: func(cmd *cobra.Command, args []string) {
+						doRaw(cmd, args, method, parameters, headers, contents)
+					},
+				}
+				subCommand.Flags().StringArrayVar(&parameters, "parameter", nil, `URL parameter, such as "x=Hello There"`)
+				subCommand.Flags().StringArrayVar(&headers, "header", nil, `Header parameter, such as "X-Custom-Key: Hello There"`)
+				subCommand.Flags().StringVar(&contents, "contents", "", `Contents to send`)
+				command.AddCommand(subCommand)
+			}(method)
+		}
+	}
 
 	{
 		command := &cobra.Command{
@@ -148,7 +180,7 @@ Example filter: 'stationNumber eq 2'
 		command.AddCommand(subCommand)
 
 		subCommand = &cobra.Command{
-			Use:   "id <filter> [patch <operation> <path> <value>]",
+			Use:   "id <user-id> [patch <operation> <path> <value>]",
 			Short: "Get a user by ID",
 			Long:  ``,
 			Args:  cobra.ExactArgs(1),
@@ -163,6 +195,25 @@ Example filter: 'stationNumber eq 2'
 Example filter: 'stationNumber eq 2'
 			`,
 			Run: doUserList,
+		}
+		command.AddCommand(subCommand)
+	}
+
+	{
+		command := &cobra.Command{
+			Use:   "user-contact-info",
+			Short: "User contact info sub-command",
+			Long:  ``,
+			Run:   nil,
+		}
+		rootCommand.AddCommand(command)
+
+		subCommand := &cobra.Command{
+			Use:   "id <user-id>",
+			Short: "Get user contact info by user ID",
+			Long:  ``,
+			Args:  cobra.ExactArgs(1),
+			Run:   doUserContactInfoID,
 		}
 		command.AddCommand(subCommand)
 	}
@@ -209,6 +260,43 @@ func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
 	return client
 }
 
+func doRaw(cmd *cobra.Command, args []string, method string, parameters []string, headers []string, contents string) {
+	client := makeClient(cmd)
+
+	targetURL := args[0]
+	args = args[1:]
+	if len(args) > 0 {
+		panic("Too many arguments")
+	}
+
+	optionsMap := map[string]string{}
+	for _, parameter := range parameters {
+		parts := strings.SplitN(parameter, "=", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		optionsMap[key] = value
+	}
+
+	headersMap := map[string]string{}
+	for _, parameter := range parameters {
+		parts := strings.SplitN(parameter, ":", 2)
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		headersMap[key] = value
+	}
+
+	response, err := client.RawOperation(method, targetURL, optionsMap, headersMap, []byte(contents))
+	if err != nil {
+		panic(err)
+	}
+
+	jsonBytes, err := json.MarshalIndent(response, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
+}
+
 func doApparatusGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
@@ -232,7 +320,11 @@ func doApparatusGet(cmd *cobra.Command, args []string) {
 		fmt.Printf("Apparatus not found.\n")
 		return
 	} else {
-		spew.Dump(currentApparatus)
+		jsonBytes, err := json.MarshalIndent(currentApparatus, "" /*prefix*/, "\t" /*indent*/)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(jsonBytes))
 	}
 }
 
@@ -256,7 +348,11 @@ func doApparatusList(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	spew.Dump(apparatusesResponse.Apparatuses)
+	jsonBytes, err := json.MarshalIndent(apparatusesResponse.Apparatuses, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doIncidentCreate(cmd *cobra.Command, args []string) {
@@ -277,7 +373,11 @@ func doIncidentCreate(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(fmt.Errorf("Could not create incident: %v", err))
 	}
-	spew.Dump(postIncidentResponse)
+	jsonBytes, err := json.MarshalIndent(postIncidentResponse, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doIncidentGet(cmd *cobra.Command, args []string) {
@@ -288,7 +388,7 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 
 	var currentIncident *emergencyreporting.Incident
 	{
-		incidentsResponse, err := client.GetIncidents(map[string]string{"filter": filter}, true)
+		incidentsResponse, err := client.GetIncidents(map[string]string{"filter": filter})
 		if err != nil {
 			panic(err)
 		}
@@ -301,7 +401,11 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	spew.Dump(currentIncident)
+	jsonBytes, err := json.MarshalIndent(currentIncident, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 
 	if len(args) == 0 {
 		return
@@ -340,11 +444,15 @@ func doIncidentList(cmd *cobra.Command, args []string) {
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
 
-	incidentsResponse, err := client.GetIncidents(options, true)
+	incidentsResponse, err := client.GetIncidents(options)
 	if err != nil {
 		panic(err)
 	}
-	spew.Dump(incidentsResponse.Incidents)
+	jsonBytes, err := json.MarshalIndent(incidentsResponse.Incidents, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doIncidentExposure(client *emergencyreporting.Client, incidentID string, args []string) {
@@ -372,7 +480,7 @@ func doIncidentExposureGet(client *emergencyreporting.Client, incidentID string,
 
 	var currentExposure *emergencyreporting.Exposure
 	{
-		exposuresResponse, err := client.GetExposures(incidentID, map[string]string{"filter": filter}, true)
+		exposuresResponse, err := client.GetExposures(incidentID, map[string]string{"filter": filter})
 		if err != nil {
 			panic(err)
 		}
@@ -385,7 +493,11 @@ func doIncidentExposureGet(client *emergencyreporting.Client, incidentID string,
 		return
 	}
 
-	spew.Dump(currentExposure)
+	jsonBytes, err := json.MarshalIndent(currentExposure, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 
 	if len(args) == 0 {
 		return
@@ -447,7 +559,11 @@ func doExposureMembersGet(client *emergencyreporting.Client, exposureID string, 
 		return
 	}
 
-	spew.Dump(currentMember)
+	jsonBytes, err := json.MarshalIndent(currentMember, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 
 	if len(args) == 0 {
 		return
@@ -462,7 +578,11 @@ func doExposureMembersGet(client *emergencyreporting.Client, exposureID string, 
 		if err != nil {
 			panic(err)
 		}
-		spew.Dump(rolesResponse.Roles)
+		jsonBytes, err := json.MarshalIndent(rolesResponse.Roles, "" /*prefix*/, "\t" /*indent*/)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(jsonBytes))
 	default:
 		panic("Bad action: " + action)
 	}
@@ -477,7 +597,11 @@ func doExposureMembersList(client *emergencyreporting.Client, exposureID string,
 	if err != nil {
 		panic(err)
 	}
-	spew.Dump(membersResponse.CrewMembers)
+	jsonBytes, err := json.MarshalIndent(membersResponse.CrewMembers, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doStationGet(cmd *cobra.Command, args []string) {
@@ -503,7 +627,11 @@ func doStationGet(cmd *cobra.Command, args []string) {
 		fmt.Printf("Station not found.\n")
 		return
 	} else {
-		spew.Dump(currentStation)
+		jsonBytes, err := json.MarshalIndent(currentStation, "" /*prefix*/, "\t" /*indent*/)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(jsonBytes))
 	}
 }
 
@@ -527,7 +655,11 @@ func doStationList(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	spew.Dump(stationsResponse.Stations)
+	jsonBytes, err := json.MarshalIndent(stationsResponse.Stations, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doUserGet(cmd *cobra.Command, args []string) {
@@ -538,7 +670,7 @@ func doUserGet(cmd *cobra.Command, args []string) {
 
 	var currentUser *emergencyreporting.User
 	{
-		usersResponse, err := client.GetUsers(map[string]string{"filter": filter}, true)
+		usersResponse, err := client.GetUsers(map[string]string{"filter": filter})
 		if err != nil {
 			panic(err)
 		}
@@ -550,7 +682,11 @@ func doUserGet(cmd *cobra.Command, args []string) {
 		fmt.Printf("User not found.\n")
 		return
 	}
-	spew.Dump(currentUser)
+	jsonBytes, err := json.MarshalIndent(currentUser, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 
 	doUserActions(client, currentUser, args)
 }
@@ -563,7 +699,7 @@ func doUserID(cmd *cobra.Command, args []string) {
 
 	var currentUser *emergencyreporting.User
 	{
-		userResponse, err := client.GetUser(userID, true)
+		userResponse, err := client.GetUser(userID)
 		if err != nil {
 			panic(err)
 		}
@@ -573,7 +709,11 @@ func doUserID(cmd *cobra.Command, args []string) {
 		fmt.Printf("User not found.\n")
 		return
 	}
-	spew.Dump(currentUser)
+	jsonBytes, err := json.MarshalIndent(currentUser, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 
 	doUserActions(client, currentUser, args)
 }
@@ -606,7 +746,11 @@ func doUserActions(client *emergencyreporting.Client, currentUser *emergencyrepo
 		if err != nil {
 			panic(err)
 		}
-		spew.Dump(patchResponse)
+		jsonBytes, err := json.MarshalIndent(patchResponse, "" /*prefix*/, "\t" /*indent*/)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(jsonBytes))
 	default:
 		panic("Unsupported action: " + action)
 	}
@@ -628,9 +772,30 @@ func doUserList(cmd *cobra.Command, args []string) {
 		"filter": filter,
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
-	usersResponse, err := client.GetUsers(options, true)
+	usersResponse, err := client.GetUsers(options)
 	if err != nil {
 		panic(err)
 	}
-	spew.Dump(usersResponse.Users)
+	jsonBytes, err := json.MarshalIndent(usersResponse.Users, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
+}
+
+func doUserContactInfoID(cmd *cobra.Command, args []string) {
+	client := makeClient(cmd)
+
+	userID := args[0]
+	args = args[1:]
+
+	getUserContactInfoResponse, err := client.GetUserContactInfo(userID)
+	if err != nil {
+		panic(fmt.Errorf("Could not get user contact info for user ID %s: %v", userID, err))
+	}
+	jsonBytes, err := json.MarshalIndent(getUserContactInfoResponse.ContactInfo, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(jsonBytes))
 }
