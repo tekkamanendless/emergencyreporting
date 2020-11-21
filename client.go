@@ -135,12 +135,6 @@ func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 	tenantHost := "login.emergencyreporting.com"
 	tenantSegment := "login.emergencyreporting.com"
 
-	goLiveDate, _ := time.Parse("2006-01-02", "2020-12-06")
-	if time.Now().Before(goLiveDate) {
-		tenantHost = "loginrc.emergencyreporting.com"
-		tenantSegment = "loginrc.emergencyreporting.com"
-	}
-
 	if c.TenantHost != "" {
 		tenantHost = c.TenantHost
 	}
