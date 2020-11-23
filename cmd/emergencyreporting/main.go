@@ -723,7 +723,12 @@ func doExposureList(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	exposuresResponse, err := client.GetExposures(map[string]string{"filter": filter})
+	options := map[string]string{
+		"filter": filter,
+		"limit":  cmd.Flag("limit").Value.String(),
+	}
+
+	exposuresResponse, err := client.GetExposures(options)
 	if err != nil {
 		panic(err)
 	}
@@ -792,7 +797,12 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	exposuresResponse, err := client.GetIncidentExposures(incidentID, map[string]string{"filter": filter})
+	options := map[string]string{
+		"filter": filter,
+		"limit":  cmd.Flag("limit").Value.String(),
+	}
+
+	exposuresResponse, err := client.GetIncidentExposures(incidentID, options)
 	if err != nil {
 		panic(err)
 	}
@@ -929,7 +939,11 @@ func doExposureMemberList(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	membersResponse, err := client.GetExposureMembers(exposureID, nil)
+	options := map[string]string{
+		"limit": cmd.Flag("limit").Value.String(),
+	}
+
+	membersResponse, err := client.GetExposureMembers(exposureID, options)
 	if err != nil {
 		panic(err)
 	}
@@ -952,7 +966,11 @@ func doExposureUserRoleList(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	rolesResponse, err := client.GetExposureMemberRoles(exposureUserID, nil)
+	options := map[string]string{
+		"limit": cmd.Flag("limit").Value.String(),
+	}
+
+	rolesResponse, err := client.GetExposureMemberRoles(exposureUserID, options)
 	if err != nil {
 		panic(err)
 	}
