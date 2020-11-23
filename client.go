@@ -366,9 +366,9 @@ func (c *Client) DeleteIncident(incidentID string) error {
 	return nil
 }
 
-// GetExposures TODO
+// GetIncidentExposures TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDGet?
-func (c *Client) GetExposures(incidentID string, options map[string]string) (*GetExposuresResponse, error) {
+func (c *Client) GetIncidentExposures(incidentID string, options map[string]string) (*GetExposuresResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
@@ -383,9 +383,9 @@ func (c *Client) GetExposures(incidentID string, options map[string]string) (*Ge
 	return &parsedResponse, nil
 }
 
-// GetExposure TODO
+// GetIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDAndExposureIDGet?
-func (c *Client) GetExposure(incidentID string, exposureID string) (*GetExposureResponse, error) {
+func (c *Client) GetIncidentExposure(incidentID string, exposureID string) (*GetExposureResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
 	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
@@ -400,9 +400,9 @@ func (c *Client) GetExposure(incidentID string, exposureID string) (*GetExposure
 	return &parsedResponse, nil
 }
 
-// PostExposure TODO
+// PostIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDPost?
-func (c *Client) PostExposure(incidentID string, exposure Exposure) (*PostExposureResponse, error) {
+func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*PostExposureResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures
@@ -429,9 +429,9 @@ func (c *Client) PostExposure(incidentID string, exposure Exposure) (*PostExposu
 	return &parsedResponse, nil
 }
 
-// DeleteExposure TODO
+// DeleteIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDAndExposureIDDelete?
-func (c *Client) DeleteExposure(incidentID string, exposureID string) error {
+func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) error {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
 	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
@@ -446,6 +446,53 @@ func (c *Client) DeleteExposure(incidentID string, exposureID string) error {
 	}
 
 	return nil
+}
+
+// GetExposures TODO
+// See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=IncidentsExposuresGet
+func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/incidents/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/exposures"
+
+	var parsedResponse GetExposuresResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the exposures: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
+// PatchExposure TODO
+// See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=IncidentsExposuresByIncidentIDAndExposureIDPatch
+func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, rowVersion string, payload PatchExposureRequest) (*PatchExposureResponse, error) {
+	c.init()
+
+	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
+
+	jsonInput, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create JSON: %v", err)
+	}
+	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"ETag":         rowVersion,
+	}
+
+	var parsedResponse PatchExposureResponse
+
+	err = c.internalRequest(http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not patch the exposure: %v", err)
+	}
+
+	return &parsedResponse, nil
 }
 
 // GetExposureLocation TODO
@@ -583,7 +630,7 @@ func (c *Client) GetExposureMembers(exposureID string, options map[string]string
 
 // GetExposureMemberRoles TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/CrewmembersRolesByExposureUserIDGet?
-func (c *Client) GetExposureMemberRoles(exposureID string, exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
+func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/crewmembers/{exposureUserID}/roles[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "https://data.emergencyreporting.com/agencyincidents/crewmembers/" + url.PathEscape(exposureUserID) + "/roles"

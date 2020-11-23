@@ -114,6 +114,7 @@ type Exposure struct {
 	PreIncidentContentsValueAmount string `json:"preIncidentContentsValueAmount"`
 	CompaintReportedByDispatch     string `json:"complaintReportedByDispatch"`
 	ExposureID                     string `json:"exposureID,omitempty"`
+	IncidentID                     string `json:"incidentID,omitempty"`
 	RowVersion                     string `json:"rowVersion,omitempty"`
 
 	Location    *ExposureLocation    `json:"-"`
@@ -131,6 +132,36 @@ type GetExposureResponse struct {
 
 type PostExposureResponse struct {
 	ExposureID string `json:"exposureID"`
+}
+
+type PatchExposureRequest struct {
+	ShiftsOrPlatoon                *string `json:"shiftsOrPlatoon,omitempty"`
+	IncidentType                   *string `json:"incidentType,omitempty"`
+	AssignedToUserID               *string `json:"assignedToUserID,omitempty"`
+	AidGivenOrReceived             *string `json:"aidGivenOrReceived,omitempty"`
+	HazmatReleased                 *string `json:"hazmatReleased,omitempty"`
+	PrimaryActionTaken             *string `json:"primaryActionTaken,omitempty"`
+	SecondaryActionTaken           *string `json:"secondaryActionTaken,omitempty"`
+	ThirdActionTaken               *string `json:"thirdActionTaken,omitempty"`
+	CompletedByUserID              *string `json:"completedByUserID,omitempty"`
+	ReviewedByUserID               *string `json:"reviewedByUserID,omitempty"`
+	CompletedDateTime              *string `json:"completedDateTime,omitempty"`
+	ReviewedDateTime               *string `json:"reviewedDateTime,omitempty"`
+	PSAPDateTime                   *string `json:"psapDateTime,omitempty"`
+	DispatchNotifiedDateTime       *string `json:"dispatchNotifiedDateTime,omitempty"`
+	InitialResponderDateTime       *string `json:"initialResponderDateTime,omitempty"`
+	HasPropertyLoss                *string `json:"hasPropertyLoss,omitempty"`
+	PropertyLossAmount             *string `json:"propertyLossAmount,omitempty"`
+	HasContentLoss                 *string `json:"hasContentLoss,omitempty"`
+	ContentLossAmount              *string `json:"contentLossAmount,omitempty"`
+	HasPreIncidentPropertyValue    *string `json:"hasPreIncidentPropertyValue,omitempty"`
+	PreIncidentPropertyValueAmount *string `json:"preIncidentPropertyValueAmount,omitempty"`
+	HasPreIncidentContentsValue    *string `json:"hasPreIncidentContentsValue,omitempty"`
+	PreIncidentContentsValueAmount *string `json:"preIncidentContentsValueAmount,omitempty"`
+	ComplaintReportedByDispatch    *string `json:"complaintReportedByDispatch,omitempty"`
+}
+type PatchExposureResponse struct {
+	RowVersion string `json:"rowVersion"`
 }
 
 type ExposureLocation struct {
