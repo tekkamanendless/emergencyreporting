@@ -301,6 +301,23 @@ func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, e
 	return &parsedResponse, nil
 }
 
+// GetIncident TODO
+// See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=getIncident
+func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID)
+
+	var parsedResponse GetIncidentResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the incident: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
 // GetIncidents TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/getIncidents?
 func (c *Client) GetIncidents(options map[string]string) (*GetIncidentsResponse, error) {
@@ -611,6 +628,23 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 	return &parsedResponse, nil
 }
 
+// GetExposureMember TODO
+// See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=ExposuresCrewmembersByExposureIDAndExposureUserIDGet
+func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*GetExposureMemberResponse, error) {
+	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers/{exposureUserID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers/" + url.PathEscape(exposureUserID)
+
+	var parsedResponse GetExposureMemberResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the exposure members: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
 // GetExposureMembers TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresCrewmembersByExposureIDGet?
 func (c *Client) GetExposureMembers(exposureID string, options map[string]string) (*GetExposureMembersResponse, error) {
@@ -731,6 +765,23 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 	return &parsedResponse, nil
 }
 
+// GetApparatus TODO
+// See: https://developer.emergencyreporting.com/api-details#api=agency-apparatus&operation=ApparatusByDepartmentApparatusIDGet
+func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error) {
+	// https://data.emergencyreporting.com/agencyapparatus/apparatus/{departmentApparatusID}
+
+	targetURL := "https://data.emergencyreporting.com/agencyapparatus/apparatus/" + url.PathEscape(apparatusID)
+
+	var parsedResponse GetApparatusResponse
+
+	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the apparatuses: %v", err)
+	}
+
+	return &parsedResponse, nil
+}
+
 // GetApparatuses TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-apparatus/operations/ApparatusGet?
 func (c *Client) GetApparatuses(options map[string]string) (*GetApparatusesResponse, error) {
@@ -738,11 +789,9 @@ func (c *Client) GetApparatuses(options map[string]string) (*GetApparatusesRespo
 
 	targetURL := "https://data.emergencyreporting.com/agencyapparatus/apparatus"
 
-	headers := map[string]string{}
-
 	var parsedResponse GetApparatusesResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
+	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the apparatuses: %v", err)
 	}

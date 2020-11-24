@@ -74,10 +74,15 @@ type Incident struct {
 	DispatchRunNumber     string `json:"dispatchRunNumber"`
 	IsComplete            string `json:"isComplete"`
 	IsReviewed            string `json:"isReviewed"`
+	NarrativesRequired    string `json:"narrativesRequired"`
 	IncidentID            string `json:"incidentID,omitempty"` // Not used for creating incidents.
 	RowVersion            string `json:"rowVersion,omitempty"` // Not used for creating incidents.
 
 	Exposures []*Exposure `json:"-"`
+}
+
+type GetIncidentResponse struct {
+	Incident *Incident `json:"incident"`
 }
 
 type GetIncidentsResponse struct {
@@ -291,6 +296,10 @@ type CrewMember struct {
 	RowVersion     string `json:"rowVersion"`
 }
 
+type GetExposureMemberResponse struct {
+	CrewMember *CrewMember `json:"crewMember"`
+}
+
 type GetExposureMembersResponse struct {
 	CrewMembers []*CrewMember `json:"crewMembers"`
 }
@@ -432,6 +441,10 @@ type Apparatus struct {
 	RowVersion                    string  `json:"rowVersion"`
 	ApparatusTypeName             string  `json:"apparatusTypeName"`
 	Manufacturer                  string  `json:"manufacturer"`
+}
+
+type GetApparatusResponse struct {
+	Apparatus *Apparatus `json:"apparatus"`
 }
 
 type GetApparatusesResponse struct {

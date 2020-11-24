@@ -23,12 +23,13 @@ This tool talks to the EmergencyReporting REST API.
 			// Set up any global stuff here that needs to run for every command.
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		},
 	}
 	rootCommand.PersistentFlags().String("config", "config.json", "Path to the configuration file with the client credentials.")
 	rootCommand.PersistentFlags().Int("limit", 100, "The page size for any queries.")
+	rootCommand.PersistentFlags().String("token", "", "The Emergency Reporting token to use.  If this is not set, then this will attempt to log in and get a token.")
 
 	{
 		command := &cobra.Command{
@@ -81,18 +82,16 @@ This tool talks to the EmergencyReporting REST API.
 		rootCommand.AddCommand(command)
 
 		subCommand := &cobra.Command{
-			Use:   "get <filter>",
+			Use:   "get <apparatus-id>",
 			Short: "Get an apparatus",
-			Long: `
-Example filter: 'apparatusID eq 21-7'
-			`,
-			Args: cobra.ExactArgs(1),
-			Run:  doApparatusGet,
+			Long:  ``,
+			Args:  cobra.ExactArgs(1),
+			Run:   doApparatusGet,
 		}
 		command.AddCommand(subCommand)
 
 		subCommand = &cobra.Command{
-			Use:   "list [,filter>]",
+			Use:   "list [<filter>]",
 			Short: "List all apparatuses",
 			Long:  ``,
 			Run:   doApparatusList,
@@ -109,15 +108,6 @@ Example filter: 'apparatusID eq 21-7'
 		rootCommand.AddCommand(command)
 
 		subCommand := &cobra.Command{
-			Use:   "get <filter>",
-			Short: "Get an exposure",
-			Long:  ``,
-			Args:  cobra.ExactArgs(1),
-			Run:   doExposureGet,
-		}
-		command.AddCommand(subCommand)
-
-		subCommand = &cobra.Command{
 			Use:   "list [<filter>]",
 			Short: "List all exposures",
 			Long: `
@@ -155,7 +145,7 @@ Example filter: 'incidentID eq 1234'
 		command.AddCommand(subCommand)
 
 		subCommand = &cobra.Command{
-			Use:   "get <incident-id> <filter>",
+			Use:   "get <incident-id> <exposure-id>",
 			Short: "Get an exposure",
 			Long:  ``,
 			Args:  cobra.ExactArgs(2),
@@ -218,6 +208,15 @@ Example filter: 'incidentID eq 1234'
 			Run:   doExposureMemberList,
 		}
 		command.AddCommand(subCommand)
+
+		subCommand = &cobra.Command{
+			Use:   "get <exposure-id> <exposure-user-id>",
+			Short: "Get the member",
+			Long:  ``,
+			Args:  cobra.ExactArgs(2),
+			Run:   doExposureMemberGet,
+		}
+		command.AddCommand(subCommand)
 	}
 	{
 		command := &cobra.Command{
@@ -265,10 +264,10 @@ Example filter: 'incidentID eq 1234'
 		command.AddCommand(subCommand)
 
 		subCommand = &cobra.Command{
-			Use:   "get <filter> [exposure ...]",
+			Use:   "get <incident-id>",
 			Short: "Get an incident",
 			Long:  ``,
-			Args:  cobra.MinimumNArgs(1),
+			Args:  cobra.ExactArgs(1),
 			Run:   doIncidentGet,
 		}
 		command.AddCommand(subCommand)
@@ -293,7 +292,7 @@ Example filter: 'dispatchRunNumber eq 1234'
 		rootCommand.AddCommand(command)
 
 		subCommand := &cobra.Command{
-			Use:   "get <filter>",
+			Use:   "get <station-id>",
 			Short: "Get a station",
 			Long:  ``,
 			Args:  cobra.ExactArgs(1),
@@ -321,20 +320,11 @@ Example filter: 'stationNumber eq 2'
 		rootCommand.AddCommand(command)
 
 		subCommand := &cobra.Command{
-			Use:   "get <filter>",
+			Use:   "get <user-id>",
 			Short: "Get a user",
 			Long:  ``,
 			Args:  cobra.ExactArgs(1),
 			Run:   doUserGet,
-		}
-		command.AddCommand(subCommand)
-
-		subCommand = &cobra.Command{
-			Use:   "id <user-id>",
-			Short: "Get a user by ID",
-			Long:  ``,
-			Args:  cobra.ExactArgs(1),
-			Run:   doUserID,
 		}
 		command.AddCommand(subCommand)
 
@@ -385,8 +375,11 @@ Example filter: 'stationNumber eq 2'
 }
 
 func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
-	flag := cmd.Flag("config")
-	configFile := flag.Value.String()
+	var configFile string
+	{
+		flag := cmd.Flag("config")
+		configFile = flag.Value.String()
+	}
 
 	if configFile == "" {
 		fmt.Printf("Missing config file.\n")
@@ -407,13 +400,23 @@ func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
 		os.Exit(1)
 	}
 
-	if len(client.Token) == 0 {
-		tokenResponse, err := client.GenerateToken()
-		if err != nil {
-			fmt.Printf("Could not generate token: %v\n", err)
-			os.Exit(1)
+	var token string
+	{
+		flag := cmd.Flag("token")
+		token = flag.Value.String()
+	}
+
+	if token == "" {
+		if len(client.Token) == 0 {
+			tokenResponse, err := client.GenerateToken()
+			if err != nil {
+				fmt.Printf("Could not generate token: %v\n", err)
+				os.Exit(1)
+			}
+			client.Token = tokenResponse.AccessToken
 		}
-		client.Token = tokenResponse.AccessToken
+	} else {
+		client.Token = token
 	}
 
 	return client
@@ -421,7 +424,7 @@ func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
 
 func doLogin(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
-	fmt.Printf("Token: %s", client.Token)
+	fmt.Printf("%s\n", client.Token)
 }
 
 func doRaw(cmd *cobra.Command, args []string, method string, parameters []string, headers []string, contents string) {
@@ -465,34 +468,24 @@ func doApparatusGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing filter")
+		panic("Missing apparatus ID")
 	}
-	filter := args[0]
+	apparatusID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
 		panic("Too many arguments")
 	}
 
-	var currentApparatus *emergencyreporting.Apparatus
-	{
-		apparatusesResponse, err := client.GetApparatuses(map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(apparatusesResponse.Apparatuses) > 0 {
-			currentApparatus = apparatusesResponse.Apparatuses[0]
-		}
+	apparatusResponse, err := client.GetApparatus(apparatusID)
+	if err != nil {
+		panic(err)
 	}
-	if currentApparatus == nil {
-		fmt.Printf("Apparatus not found.\n")
-		return
-	} else {
-		jsonBytes, err := json.MarshalIndent(currentApparatus, "" /*prefix*/, "\t" /*indent*/)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(string(jsonBytes))
+
+	jsonBytes, err := json.MarshalIndent(apparatusResponse.Apparatus, "" /*prefix*/, "\t" /*indent*/)
+	if err != nil {
+		panic(err)
 	}
+	fmt.Println(string(jsonBytes))
 }
 
 func doApparatusList(cmd *cobra.Command, args []string) {
@@ -565,30 +558,20 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing filter")
+		panic("Missing incident ID")
 	}
-	filter := args[0]
+	incidentID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
 		panic("Too many arguments")
 	}
 
-	var currentIncident *emergencyreporting.Incident
-	{
-		incidentsResponse, err := client.GetIncidents(map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(incidentsResponse.Incidents) > 0 {
-			currentIncident = incidentsResponse.Incidents[0]
-		}
-	}
-	if currentIncident == nil {
-		fmt.Printf("Incident not found.\n")
-		return
+	incidentResponse, err := client.GetIncident(incidentID)
+	if err != nil {
+		panic(err)
 	}
 
-	jsonBytes, err := json.MarshalIndent(currentIncident, "" /*prefix*/, "\t" /*indent*/)
+	jsonBytes, err := json.MarshalIndent(incidentResponse.Incident, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
 		panic(err)
 	}
@@ -655,40 +638,6 @@ func doIncidentExposureCreate(cmd *cobra.Command, args []string) {
 	fmt.Println(string(jsonBytes))
 }
 
-func doExposureGet(cmd *cobra.Command, args []string) {
-	client := makeClient(cmd)
-
-	if len(args) < 1 {
-		panic("Missing argument: filter (example: 'incidentID eq 1234')")
-	}
-	filter := args[0]
-	args = args[1:]
-	if len(args) > 0 {
-		panic("Too many arguments")
-	}
-
-	var currentExposure *emergencyreporting.Exposure
-	{
-		exposuresResponse, err := client.GetExposures(map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(exposuresResponse.Exposures) > 0 {
-			currentExposure = exposuresResponse.Exposures[0]
-		}
-	}
-	if currentExposure == nil {
-		fmt.Printf("Exposure not found.\n")
-		return
-	}
-
-	jsonBytes, err := json.MarshalIndent(currentExposure, "" /*prefix*/, "\t" /*indent*/)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(jsonBytes))
-}
-
 func doIncidentExposureDelete(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
@@ -714,11 +663,11 @@ func doIncidentExposureDelete(cmd *cobra.Command, args []string) {
 func doExposureList(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
-	if len(args) < 1 {
-		panic("Missing argument: filter (example: 'exposureID eq 1234')")
+	var filter string
+	if len(args) > 0 {
+		filter = args[0]
+		args = args[1:]
 	}
-	filter := args[0]
-	args = args[1:]
 	if len(args) > 0 {
 		panic("Too many arguments")
 	}
@@ -748,30 +697,20 @@ func doIncidentExposureGet(cmd *cobra.Command, args []string) {
 	}
 	incidentID := args[0]
 	if len(args) < 2 {
-		panic("Missing argument: filter (example: 'exposureID eq 1234')")
+		panic("Missing exposure ID")
 	}
-	filter := args[1]
+	exposureID := args[1]
 	args = args[2:]
 	if len(args) > 0 {
 		panic("Too many arguments")
 	}
 
-	var currentExposure *emergencyreporting.Exposure
-	{
-		exposuresResponse, err := client.GetIncidentExposures(incidentID, map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(exposuresResponse.Exposures) > 0 {
-			currentExposure = exposuresResponse.Exposures[0]
-		}
-	}
-	if currentExposure == nil {
-		fmt.Printf("Exposure not found.\n")
-		return
+	exposureResponse, err := client.GetIncidentExposure(incidentID, exposureID)
+	if err != nil {
+		panic(err)
 	}
 
-	jsonBytes, err := json.MarshalIndent(currentExposure, "" /*prefix*/, "\t" /*indent*/)
+	jsonBytes, err := json.MarshalIndent(exposureResponse.Exposure, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
 		panic(err)
 	}
@@ -893,34 +832,24 @@ func doExposureMemberGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing argument: exposure ID")
+		panic("Missing exposure ID")
 	}
 	exposureID := args[0]
 	if len(args) < 2 {
-		panic("Missing argument: filter (example: 'exposureUserID eq 1234')")
+		panic("Missing exposure user ID")
 	}
-	filter := args[1]
+	exposureUserID := args[1]
 	args = args[2:]
 	if len(args) > 0 {
 		panic("Too many arguments")
 	}
 
-	var currentMember *emergencyreporting.CrewMember
-	{
-		membersResponse, err := client.GetExposureMembers(exposureID, map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(membersResponse.CrewMembers) > 0 {
-			currentMember = membersResponse.CrewMembers[0]
-		}
-	}
-	if currentMember == nil {
-		fmt.Printf("Member not found.\n")
-		return
+	memberResponse, err := client.GetExposureMember(exposureID, exposureUserID)
+	if err != nil {
+		panic(err)
 	}
 
-	jsonBytes, err := json.MarshalIndent(currentMember, "" /*prefix*/, "\t" /*indent*/)
+	jsonBytes, err := json.MarshalIndent(memberResponse.CrewMember, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
 		panic(err)
 	}
@@ -1043,39 +972,6 @@ func doStationList(cmd *cobra.Command, args []string) {
 }
 
 func doUserGet(cmd *cobra.Command, args []string) {
-	client := makeClient(cmd)
-
-	if len(args) < 1 {
-		panic("Missing filter")
-	}
-	filter := args[0]
-	args = args[1:]
-	if len(args) > 0 {
-		panic("Too many arguments")
-	}
-
-	var currentUser *emergencyreporting.User
-	{
-		usersResponse, err := client.GetUsers(map[string]string{"filter": filter})
-		if err != nil {
-			panic(err)
-		}
-		if len(usersResponse.Users) > 0 {
-			currentUser = usersResponse.Users[0]
-		}
-	}
-	if currentUser == nil {
-		fmt.Printf("User not found.\n")
-		return
-	}
-	jsonBytes, err := json.MarshalIndent(currentUser, "" /*prefix*/, "\t" /*indent*/)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(jsonBytes))
-}
-
-func doUserID(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
