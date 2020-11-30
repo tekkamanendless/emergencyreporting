@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,7 @@ type Client struct {
 	TenantHost      string `json:"tenant_host"`      // (New password authentication) If present, use this instead of the default value.
 	TenantSegment   string `json:"tenant_segment"`   // (New password authentication) If present, use this instead of the default value.
 	Token           string `json:"token"`            // Required, but can be generated using the username, etc.
+	Host            string `json:"host"`             // If set, this will be used instead of "https://data.emergencyreporting.com".  If the protocol is not specified, "https://" is assumed.
 	SubscriptionKey string `json:"subscription_key"` // Required no matter what.
 	Logger          Logger // This is the Logger instance to use.  If empty, then the default one will be used.
 
@@ -199,6 +201,17 @@ func (c *Client) RawOperation(method string, targetURL string, options map[strin
 func (c *Client) internalRequest(method string, targetURL string, options map[string]string, headers map[string]string, body []byte, targetPointer interface{}) error {
 	c.init()
 
+	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
+		host := "data.emergencyreporting.com"
+		if c.Host != "" {
+			host = c.Host
+		}
+		if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
+			host = "https://" + host
+		}
+		targetURL = strings.TrimRight(host, "/") + "/" + strings.TrimLeft(targetURL, "/")
+	}
+
 	queryParts := url.Values{}
 	for key, value := range options {
 		queryParts.Set(key, value)
@@ -289,7 +302,7 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, error) {
 	// https://data.emergencyreporting.com/agencystations/stations[?rowVersion][&changesSince][&limit][&offset][&showArchived][&filter]
 
-	targetURL := "https://data.emergencyreporting.com/agencystations/stations"
+	targetURL := "/agencystations/stations"
 
 	var parsedResponse GetStationsResponse
 
@@ -306,7 +319,7 @@ func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, e
 func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID)
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID)
 
 	var parsedResponse GetIncidentResponse
 
@@ -323,7 +336,7 @@ func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
 func (c *Client) GetIncidents(options map[string]string) (*GetIncidentsResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents"
+	targetURL := "/agencyincidents/incidents"
 
 	var parsedResponse GetIncidentsResponse
 
@@ -342,7 +355,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents"
+	targetURL := "/agencyincidents/incidents"
 
 	jsonInput, err := json.Marshal(incident)
 	if err != nil {
@@ -369,7 +382,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 func (c *Client) DeleteIncident(incidentID string) error {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID)
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID)
 
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -388,7 +401,7 @@ func (c *Client) DeleteIncident(incidentID string) error {
 func (c *Client) GetIncidentExposures(incidentID string, options map[string]string) (*GetExposuresResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
 
 	var parsedResponse GetExposuresResponse
 
@@ -405,7 +418,7 @@ func (c *Client) GetIncidentExposures(incidentID string, options map[string]stri
 func (c *Client) GetIncidentExposure(incidentID string, exposureID string) (*GetExposureResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
 
 	var parsedResponse GetExposureResponse
 
@@ -424,7 +437,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
 
 	jsonInput, err := json.Marshal(exposure)
 	if err != nil {
@@ -451,7 +464,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) error {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
 
 	headers := map[string]string{
 		"Content-Type": "application/json",
@@ -470,7 +483,7 @@ func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) er
 func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/exposures"
+	targetURL := "/agencyincidents/incidents/exposures"
 
 	var parsedResponse GetExposuresResponse
 
@@ -489,7 +502,7 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
+	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
 
 	jsonInput, err := json.Marshal(payload)
 	if err != nil {
@@ -517,7 +530,7 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 func (c *Client) GetExposureLocation(exposureID string) (*GetExposureLocationResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/location[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/location"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/location"
 
 	var parsedResponse GetExposureLocationResponse
 
@@ -536,7 +549,7 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/location[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/location"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/location"
 
 	jsonInput, err := json.Marshal(location)
 	if err != nil {
@@ -564,7 +577,7 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/fire[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/fire"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/fire"
 
 	var parsedResponse GetExposureFireResponse
 
@@ -584,7 +597,7 @@ func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, e
 func (c *Client) GetExposureApparatuses(exposureID string) (*GetExposureApparatusesResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/apparatuses[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/apparatuses"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/apparatuses"
 
 	var parsedResponse GetExposureApparatusesResponse
 
@@ -603,7 +616,7 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/apparatuses[?useAssociatedAgencyApparatusID]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/apparatuses"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/apparatuses"
 	options := map[string]string{
 		"useAssociatedAgencyApparatusID": "1",
 	}
@@ -633,7 +646,7 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*GetExposureMemberResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers/{exposureUserID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers/" + url.PathEscape(exposureUserID)
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers/" + url.PathEscape(exposureUserID)
 
 	var parsedResponse GetExposureMemberResponse
 
@@ -650,7 +663,7 @@ func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*G
 func (c *Client) GetExposureMembers(exposureID string, options map[string]string) (*GetExposureMembersResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers"
+	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers"
 
 	var parsedResponse GetExposureMembersResponse
 
@@ -667,7 +680,7 @@ func (c *Client) GetExposureMembers(exposureID string, options map[string]string
 func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/crewmembers/{exposureUserID}/roles[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyincidents/crewmembers/" + url.PathEscape(exposureUserID) + "/roles"
+	targetURL := "/agencyincidents/crewmembers/" + url.PathEscape(exposureUserID) + "/roles"
 
 	var parsedResponse GetExposureMemberRolesResponse
 
@@ -684,7 +697,7 @@ func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[strin
 func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users[?rowVersion][&limit][&offset][&filter][&orderby]
 
-	targetURL := "https://data.emergencyreporting.com/agencyusers/users"
+	targetURL := "/agencyusers/users"
 
 	headers := map[string]string{}
 
@@ -703,7 +716,7 @@ func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) 
 func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyusers/users/" + url.PathEscape(userID)
+	targetURL := "/agencyusers/users/" + url.PathEscape(userID)
 
 	options := map[string]string{}
 	headers := map[string]string{}
@@ -723,7 +736,7 @@ func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}/contactinfo
 
-	targetURL := "https://data.emergencyreporting.com/agencyusers/users/" + url.PathEscape(userID) + "/contactinfo"
+	targetURL := "/agencyusers/users/" + url.PathEscape(userID) + "/contactinfo"
 
 	var parsedResponse GetUserContactInfoResponse
 
@@ -742,7 +755,7 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyusers/users/" + url.PathEscape(userID)
+	targetURL := "/agencyusers/users/" + url.PathEscape(userID)
 
 	jsonInput, err := json.Marshal(payload)
 	if err != nil {
@@ -770,7 +783,7 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error) {
 	// https://data.emergencyreporting.com/agencyapparatus/apparatus/{departmentApparatusID}
 
-	targetURL := "https://data.emergencyreporting.com/agencyapparatus/apparatus/" + url.PathEscape(apparatusID)
+	targetURL := "/agencyapparatus/apparatus/" + url.PathEscape(apparatusID)
 
 	var parsedResponse GetApparatusResponse
 
@@ -787,7 +800,7 @@ func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error)
 func (c *Client) GetApparatuses(options map[string]string) (*GetApparatusesResponse, error) {
 	// https://data.emergencyreporting.com/agencyapparatus/apparatus[?limit][&offset][&filter][&orderby][&rowVersion]
 
-	targetURL := "https://data.emergencyreporting.com/agencyapparatus/apparatus"
+	targetURL := "/agencyapparatus/apparatus"
 
 	var parsedResponse GetApparatusesResponse
 
