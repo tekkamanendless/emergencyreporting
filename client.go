@@ -27,6 +27,7 @@ type Logger interface {
 // DefaultLogger is the default logger that uses the "log" package.
 type DefaultLogger struct{}
 
+// Printf is the print function for this logger.
 func (DefaultLogger) Printf(format string, v ...interface{}) {
 	log.Printf(format, v...)
 }
@@ -34,6 +35,7 @@ func (DefaultLogger) Printf(format string, v ...interface{}) {
 // NullLogger is a logger that doesn't log anything.
 type NullLogger struct{}
 
+// Printf is the print function for this logger.
 func (NullLogger) Printf(format string, v ...interface{}) {}
 
 // Client is the client interface for communicating with the Emergency Reporting API.
@@ -49,7 +51,8 @@ type Client struct {
 	Token           string `json:"token"`            // Required, but can be generated using the username, etc.
 	Host            string `json:"host"`             // If set, this will be used instead of "https://data.emergencyreporting.com".  If the protocol is not specified, "https://" is assumed.
 	SubscriptionKey string `json:"subscription_key"` // Required no matter what.
-	Logger          Logger // This is the Logger instance to use.  If empty, then the default one will be used.
+
+	Logger Logger `json:"-"` // This is the Logger instance to use.  If empty, then the default one will be used.
 
 	client http.Client
 }
@@ -61,6 +64,7 @@ func (c *Client) init() {
 	}
 }
 
+// GenerateToken generates a new token.
 func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 	c.init()
 
@@ -89,6 +93,8 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 	return &returnValue, nil
 }
 
+// GenerateTokenLegacy generates a token using the legacy workflow.
+// Deprecated; this will no longer work.
 func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 	c.init()
 
@@ -131,6 +137,7 @@ func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 	return &parsedResponse, nil
 }
 
+// GenerateToken2020 generates a token using the late-2020 method.
 func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 	c.init()
 
@@ -495,7 +502,7 @@ func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse,
 	return &parsedResponse, nil
 }
 
-// PatchExposure TODO
+// PatchIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=IncidentsExposuresByIncidentIDAndExposureIDPatch
 func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, rowVersion string, payload PatchExposureRequest) (*PatchExposureResponse, error) {
 	c.init()
@@ -731,7 +738,7 @@ func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 	return &parsedResponse, nil
 }
 
-// GetExposureApparatuses TODO
+// GetUserContactInfo TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersContactinfoByUserIDGet?
 func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}/contactinfo
