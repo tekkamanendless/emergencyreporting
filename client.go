@@ -13,11 +13,16 @@ import (
 	"time"
 )
 
-// ErrorDuplicate represents a duplicate key error.
-var ErrorDuplicate = fmt.Errorf("Duplicate")
-
-// ErrorNotFound represents a 404 "not found" error.
-var ErrorNotFound = fmt.Errorf("NotFound")
+// Error values.
+//
+// Remember to test for these using `errors.Is`, since they may be wrapped
+// coming out of the client.
+var (
+	// ErrorDuplicate represents a duplicate key error.
+	ErrorDuplicate = fmt.Errorf("Duplicate")
+	// ErrorNotFound represents a 404 "not found" error.
+	ErrorNotFound = fmt.Errorf("NotFound")
+)
 
 // Logger is the basic logger for this package.
 type Logger interface {
@@ -110,13 +115,13 @@ func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 	c.Logger.Printf("POST %s\n", targetURL)
 	response, err := c.client.PostForm(targetURL, values)
 	if err != nil {
-		return nil, fmt.Errorf("Could not post form: %v", err)
+		return nil, fmt.Errorf("Could not post form: %w", err)
 	}
 	defer response.Body.Close()
 
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read body: %v", err)
+		return nil, fmt.Errorf("Could not read body: %w", err)
 	}
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
@@ -131,7 +136,7 @@ func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 	var parsedResponse GenerateTokenResponse
 	err = json.Unmarshal(contents, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse JSON: %v", err)
+		return nil, fmt.Errorf("Could not parse JSON: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -168,13 +173,13 @@ func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 	c.Logger.Printf("POST %s\n", targetURL)
 	response, err := c.client.PostForm(targetURL, values)
 	if err != nil {
-		return nil, fmt.Errorf("Could not post form: %v", err)
+		return nil, fmt.Errorf("Could not post form: %w", err)
 	}
 	defer response.Body.Close()
 
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read body: %v", err)
+		return nil, fmt.Errorf("Could not read body: %w", err)
 	}
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
@@ -189,7 +194,7 @@ func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 	var parsedResponse GenerateTokenResponseV2
 	err = json.Unmarshal(contents, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse JSON: %v", err)
+		return nil, fmt.Errorf("Could not parse JSON: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -230,7 +235,7 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 	c.Logger.Printf("%s %s\n", method, targetURL)
 	request, err := http.NewRequest(method, targetURL, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("Could not make request: %v", err)
+		return fmt.Errorf("Could not make request: %w", err)
 	}
 	request.Header.Set("Authorization", c.Token)
 	request.Header.Set("Ocp-Apim-Subscription-Key", c.SubscriptionKey)
@@ -240,13 +245,13 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 
 	response, err := c.client.Do(request)
 	if err != nil {
-		return fmt.Errorf("Could not perform operation: %v", err)
+		return fmt.Errorf("Could not perform operation: %w", err)
 	}
 	defer response.Body.Close()
 
 	contents, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return fmt.Errorf("Could not read body: %v", err)
+		return fmt.Errorf("Could not read body: %w", err)
 	}
 	c.Logger.Printf("%s %s %d %d\n", method, targetURL, response.StatusCode, len(contents))
 
@@ -297,7 +302,7 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 	if targetPointer != nil {
 		err = json.Unmarshal(contents, targetPointer)
 		if err != nil {
-			return fmt.Errorf("Could not parse JSON: %v", err)
+			return fmt.Errorf("Could not parse JSON: %w", err)
 		}
 	}
 
@@ -315,7 +320,7 @@ func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, e
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the stations: %v", err)
+		return nil, fmt.Errorf("Could not get the stations: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -332,7 +337,7 @@ func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the incident: %v", err)
+		return nil, fmt.Errorf("Could not get the incident: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -349,7 +354,7 @@ func (c *Client) GetIncidents(options map[string]string) (*GetIncidentsResponse,
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the incidents: %v", err)
+		return nil, fmt.Errorf("Could not get the incidents: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -366,7 +371,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 
 	jsonInput, err := json.Marshal(incident)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -378,7 +383,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 
 	err = c.internalRequest(http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create the incident: %v", err)
+		return nil, fmt.Errorf("Could not create the incident: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -397,7 +402,7 @@ func (c *Client) DeleteIncident(incidentID string) error {
 
 	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
 	if err != nil {
-		return fmt.Errorf("Could not delete the incident: %v", err)
+		return fmt.Errorf("Could not delete the incident: %w", err)
 	}
 
 	return nil
@@ -414,7 +419,7 @@ func (c *Client) GetIncidentExposures(incidentID string, options map[string]stri
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposures: %v", err)
+		return nil, fmt.Errorf("Could not get the exposures: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -431,7 +436,7 @@ func (c *Client) GetIncidentExposure(incidentID string, exposureID string) (*Get
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -448,7 +453,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 
 	jsonInput, err := json.Marshal(exposure)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -460,7 +465,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 
 	err = c.internalRequest(http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create the exposure: %v", err)
+		return nil, fmt.Errorf("Could not create the exposure: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -479,7 +484,7 @@ func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) er
 
 	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
 	if err != nil {
-		return fmt.Errorf("Could not delete the exposure: %v", err)
+		return fmt.Errorf("Could not delete the exposure: %w", err)
 	}
 
 	return nil
@@ -496,7 +501,7 @@ func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse,
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposures: %v", err)
+		return nil, fmt.Errorf("Could not get the exposures: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -513,7 +518,7 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 
 	jsonInput, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -526,7 +531,7 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 
 	err = c.internalRequest(http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not patch the exposure: %v", err)
+		return nil, fmt.Errorf("Could not patch the exposure: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -543,7 +548,7 @@ func (c *Client) GetExposureLocation(exposureID string) (*GetExposureLocationRes
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure location: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure location: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -560,7 +565,7 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 
 	jsonInput, err := json.Marshal(location)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -573,7 +578,7 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 
 	err = c.internalRequest(http.MethodPut, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not put the exposure location: %v", err)
+		return nil, fmt.Errorf("Could not put the exposure location: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -593,7 +598,7 @@ func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, e
 		if err == ErrorNotFound {
 			return nil, err
 		}
-		return nil, fmt.Errorf("Could not get the exposure fire: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure fire: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -610,7 +615,7 @@ func (c *Client) GetExposureApparatuses(exposureID string) (*GetExposureApparatu
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure apparatuses: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure apparatuses: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -630,7 +635,7 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 
 	jsonInput, err := json.Marshal(apparatus)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -642,7 +647,7 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 
 	err = c.internalRequest(http.MethodPost, targetURL, options, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create the apparatus: %v", err)
+		return nil, fmt.Errorf("Could not create the apparatus: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -659,7 +664,7 @@ func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*G
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure members: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure members: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -676,7 +681,7 @@ func (c *Client) GetExposureMembers(exposureID string, options map[string]string
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure members: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure members: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -693,7 +698,7 @@ func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[strin
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the exposure member roles: %v", err)
+		return nil, fmt.Errorf("Could not get the exposure member roles: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -712,7 +717,7 @@ func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) 
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the users: %v", err)
+		return nil, fmt.Errorf("Could not get the users: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -732,7 +737,7 @@ func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the user: %v", err)
+		return nil, fmt.Errorf("Could not get the user: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -749,7 +754,7 @@ func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse,
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the user contact info: %v", err)
+		return nil, fmt.Errorf("Could not get the user contact info: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -766,7 +771,7 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 
 	jsonInput, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create JSON: %v", err)
+		return nil, fmt.Errorf("Could not create JSON: %w", err)
 	}
 	c.Logger.Printf("JSON input: %s\n", string(jsonInput))
 
@@ -779,7 +784,7 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 
 	err = c.internalRequest(http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not patch the user: %v", err)
+		return nil, fmt.Errorf("Could not patch the user: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -796,7 +801,7 @@ func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error)
 
 	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the apparatuses: %v", err)
+		return nil, fmt.Errorf("Could not get the apparatuses: %w", err)
 	}
 
 	return &parsedResponse, nil
@@ -813,7 +818,7 @@ func (c *Client) GetApparatuses(options map[string]string) (*GetApparatusesRespo
 
 	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get the apparatuses: %v", err)
+		return nil, fmt.Errorf("Could not get the apparatuses: %w", err)
 	}
 
 	return &parsedResponse, nil
