@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -375,6 +376,8 @@ Example filter: 'stationNumber eq 2'
 }
 
 func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
+	ctx := context.Background()
+
 	var configFile string
 	{
 		flag := cmd.Flag("config")
@@ -408,7 +411,7 @@ func makeClient(cmd *cobra.Command) *emergencyreporting.Client {
 
 	if token == "" {
 		if len(client.Token) == 0 {
-			tokenResponse, err := client.GenerateToken()
+			tokenResponse, err := client.GenerateToken(ctx)
 			if err != nil {
 				fmt.Printf("Could not generate token: %v\n", err)
 				os.Exit(1)
@@ -428,6 +431,7 @@ func doLogin(cmd *cobra.Command, args []string) {
 }
 
 func doRaw(cmd *cobra.Command, args []string, method string, parameters []string, headers []string, contents string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	targetURL := args[0]
@@ -452,7 +456,7 @@ func doRaw(cmd *cobra.Command, args []string, method string, parameters []string
 		headersMap[key] = value
 	}
 
-	response, err := client.RawOperation(method, targetURL, optionsMap, headersMap, []byte(contents))
+	response, err := client.RawOperation(ctx, method, targetURL, optionsMap, headersMap, []byte(contents))
 	if err != nil {
 		panic(err)
 	}
@@ -465,6 +469,7 @@ func doRaw(cmd *cobra.Command, args []string, method string, parameters []string
 }
 
 func doApparatusGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -476,7 +481,7 @@ func doApparatusGet(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	apparatusResponse, err := client.GetApparatus(apparatusID)
+	apparatusResponse, err := client.GetApparatus(ctx, apparatusID)
 	if err != nil {
 		panic(err)
 	}
@@ -489,6 +494,7 @@ func doApparatusGet(cmd *cobra.Command, args []string) {
 }
 
 func doApparatusList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	filter := ""
@@ -504,7 +510,7 @@ func doApparatusList(cmd *cobra.Command, args []string) {
 		"filter": filter,
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
-	apparatusesResponse, err := client.GetApparatuses(options)
+	apparatusesResponse, err := client.GetApparatuses(ctx, options)
 	if err != nil {
 		panic(err)
 	}
@@ -516,6 +522,7 @@ func doApparatusList(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentCreate(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -530,11 +537,11 @@ func doIncidentCreate(cmd *cobra.Command, args []string) {
 	var incident emergencyreporting.Incident
 	err := json.Unmarshal([]byte(jsonString), &incident)
 	if err != nil {
-		panic(fmt.Errorf("Could not parse JSON: %v", err))
+		panic(fmt.Errorf("could not parse JSON: %v", err))
 	}
-	postIncidentResponse, err := client.PostIncident(incident)
+	postIncidentResponse, err := client.PostIncident(ctx, incident)
 	if err != nil {
-		panic(fmt.Errorf("Could not create incident: %v", err))
+		panic(fmt.Errorf("could not create incident: %v", err))
 	}
 	jsonBytes, err := json.MarshalIndent(postIncidentResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
@@ -544,10 +551,11 @@ func doIncidentCreate(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentDelete(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	for _, incidentID := range args {
-		err := client.DeleteIncident(incidentID)
+		err := client.DeleteIncident(ctx, incidentID)
 		if err != nil {
 			panic(err)
 		}
@@ -555,6 +563,7 @@ func doIncidentDelete(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -566,7 +575,7 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	incidentResponse, err := client.GetIncident(incidentID)
+	incidentResponse, err := client.GetIncident(ctx, incidentID)
 	if err != nil {
 		panic(err)
 	}
@@ -579,6 +588,7 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	filter := ""
@@ -595,7 +605,7 @@ func doIncidentList(cmd *cobra.Command, args []string) {
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
 
-	incidentsResponse, err := client.GetIncidents(options)
+	incidentsResponse, err := client.GetIncidents(ctx, options)
 	if err != nil {
 		panic(err)
 	}
@@ -607,6 +617,7 @@ func doIncidentList(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentExposureCreate(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -625,11 +636,11 @@ func doIncidentExposureCreate(cmd *cobra.Command, args []string) {
 	var exposure emergencyreporting.Exposure
 	err := json.Unmarshal([]byte(jsonString), &exposure)
 	if err != nil {
-		panic(fmt.Errorf("Could not parse JSON: %v", err))
+		panic(fmt.Errorf("could not parse JSON: %v", err))
 	}
-	postExposureResponse, err := client.PostIncidentExposure(incidentID, exposure)
+	postExposureResponse, err := client.PostIncidentExposure(ctx, incidentID, exposure)
 	if err != nil {
-		panic(fmt.Errorf("Could not create exposure: %v", err))
+		panic(fmt.Errorf("could not create exposure: %v", err))
 	}
 	jsonBytes, err := json.MarshalIndent(postExposureResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
@@ -639,6 +650,7 @@ func doIncidentExposureCreate(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentExposureDelete(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -654,13 +666,14 @@ func doIncidentExposureDelete(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	err := client.DeleteIncidentExposure(incidentID, exposureID)
+	err := client.DeleteIncidentExposure(ctx, incidentID, exposureID)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func doExposureList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	var filter string
@@ -677,7 +690,7 @@ func doExposureList(cmd *cobra.Command, args []string) {
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
 
-	exposuresResponse, err := client.GetExposures(options)
+	exposuresResponse, err := client.GetExposures(ctx, options)
 	if err != nil {
 		panic(err)
 	}
@@ -690,6 +703,7 @@ func doExposureList(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentExposureGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -705,7 +719,7 @@ func doIncidentExposureGet(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	exposureResponse, err := client.GetIncidentExposure(incidentID, exposureID)
+	exposureResponse, err := client.GetIncidentExposure(ctx, incidentID, exposureID)
 	if err != nil {
 		panic(err)
 	}
@@ -718,6 +732,7 @@ func doIncidentExposureGet(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentExposureList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) == 0 {
@@ -741,7 +756,7 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
 
-	exposuresResponse, err := client.GetIncidentExposures(incidentID, options)
+	exposuresResponse, err := client.GetIncidentExposures(ctx, incidentID, options)
 	if err != nil {
 		panic(err)
 	}
@@ -754,6 +769,7 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 }
 
 func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -775,7 +791,7 @@ func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
 
 	var currentExposure *emergencyreporting.Exposure
 	{
-		exposureResponse, err := client.GetIncidentExposure(incidentID, exposureID)
+		exposureResponse, err := client.GetIncidentExposure(ctx, incidentID, exposureID)
 		if err != nil {
 			panic(err)
 		}
@@ -792,7 +808,7 @@ func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	patchExposureResponse, err := client.PatchIncidentExposure(incidentID, exposureID, currentExposure.RowVersion, patchExposureRequest)
+	patchExposureResponse, err := client.PatchIncidentExposure(ctx, incidentID, exposureID, currentExposure.RowVersion, patchExposureRequest)
 	if err != nil {
 		panic(err)
 	}
@@ -805,6 +821,7 @@ func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
 }
 
 func doExposureLocationGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -816,7 +833,7 @@ func doExposureLocationGet(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	response, err := client.GetExposureLocation(exposureID)
+	response, err := client.GetExposureLocation(ctx, exposureID)
 	if err != nil {
 		panic(err)
 	}
@@ -829,6 +846,7 @@ func doExposureLocationGet(cmd *cobra.Command, args []string) {
 }
 
 func doExposureMemberGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -844,7 +862,7 @@ func doExposureMemberGet(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	memberResponse, err := client.GetExposureMember(exposureID, exposureUserID)
+	memberResponse, err := client.GetExposureMember(ctx, exposureID, exposureUserID)
 	if err != nil {
 		panic(err)
 	}
@@ -857,6 +875,7 @@ func doExposureMemberGet(cmd *cobra.Command, args []string) {
 }
 
 func doExposureMemberList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -872,7 +891,7 @@ func doExposureMemberList(cmd *cobra.Command, args []string) {
 		"limit": cmd.Flag("limit").Value.String(),
 	}
 
-	membersResponse, err := client.GetExposureMembers(exposureID, options)
+	membersResponse, err := client.GetExposureMembers(ctx, exposureID, options)
 	if err != nil {
 		panic(err)
 	}
@@ -884,6 +903,7 @@ func doExposureMemberList(cmd *cobra.Command, args []string) {
 }
 
 func doExposureUserRoleList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -899,7 +919,7 @@ func doExposureUserRoleList(cmd *cobra.Command, args []string) {
 		"limit": cmd.Flag("limit").Value.String(),
 	}
 
-	rolesResponse, err := client.GetExposureMemberRoles(exposureUserID, options)
+	rolesResponse, err := client.GetExposureMemberRoles(ctx, exposureUserID, options)
 	if err != nil {
 		panic(err)
 	}
@@ -911,6 +931,7 @@ func doExposureUserRoleList(cmd *cobra.Command, args []string) {
 }
 
 func doStationGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -924,7 +945,7 @@ func doStationGet(cmd *cobra.Command, args []string) {
 
 	var currentStation *emergencyreporting.Station
 	{
-		apparatusesResponse, err := client.GetStations(map[string]string{"filter": filter})
+		apparatusesResponse, err := client.GetStations(ctx, map[string]string{"filter": filter})
 		if err != nil {
 			panic(err)
 		}
@@ -945,6 +966,7 @@ func doStationGet(cmd *cobra.Command, args []string) {
 }
 
 func doStationList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	filter := ""
@@ -960,7 +982,7 @@ func doStationList(cmd *cobra.Command, args []string) {
 		"filter": filter,
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
-	stationsResponse, err := client.GetStations(options)
+	stationsResponse, err := client.GetStations(ctx, options)
 	if err != nil {
 		panic(err)
 	}
@@ -972,6 +994,7 @@ func doStationList(cmd *cobra.Command, args []string) {
 }
 
 func doUserGet(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -985,7 +1008,7 @@ func doUserGet(cmd *cobra.Command, args []string) {
 
 	var currentUser *emergencyreporting.User
 	{
-		userResponse, err := client.GetUser(userID)
+		userResponse, err := client.GetUser(ctx, userID)
 		if err != nil {
 			panic(err)
 		}
@@ -1003,6 +1026,7 @@ func doUserGet(cmd *cobra.Command, args []string) {
 }
 
 func doUserPatch(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -1029,7 +1053,7 @@ func doUserPatch(cmd *cobra.Command, args []string) {
 
 	var currentUser *emergencyreporting.User
 	{
-		userResponse, err := client.GetUser(userID)
+		userResponse, err := client.GetUser(ctx, userID)
 		if err != nil {
 			panic(err)
 		}
@@ -1047,7 +1071,7 @@ func doUserPatch(cmd *cobra.Command, args []string) {
 			Value:     value,
 		},
 	}
-	patchResponse, err := client.PatchUser(currentUser.UserID, currentUser.RowVersion, patchUserRequest)
+	patchResponse, err := client.PatchUser(ctx, currentUser.UserID, currentUser.RowVersion, patchUserRequest)
 	if err != nil {
 		panic(err)
 	}
@@ -1059,6 +1083,7 @@ func doUserPatch(cmd *cobra.Command, args []string) {
 }
 
 func doUserList(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	filter := ""
@@ -1074,7 +1099,7 @@ func doUserList(cmd *cobra.Command, args []string) {
 		"filter": filter,
 		"limit":  cmd.Flag("limit").Value.String(),
 	}
-	usersResponse, err := client.GetUsers(options)
+	usersResponse, err := client.GetUsers(ctx, options)
 	if err != nil {
 		panic(err)
 	}
@@ -1086,6 +1111,7 @@ func doUserList(cmd *cobra.Command, args []string) {
 }
 
 func doUserContactInfoID(cmd *cobra.Command, args []string) {
+	ctx := context.Background()
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
@@ -1097,9 +1123,9 @@ func doUserContactInfoID(cmd *cobra.Command, args []string) {
 		panic("Too many arguments")
 	}
 
-	getUserContactInfoResponse, err := client.GetUserContactInfo(userID)
+	getUserContactInfoResponse, err := client.GetUserContactInfo(ctx, userID)
 	if err != nil {
-		panic(fmt.Errorf("Could not get user contact info for user ID %s: %v", userID, err))
+		panic(fmt.Errorf("could not get user contact info for user ID %s: %v", userID, err))
 	}
 	jsonBytes, err := json.MarshalIndent(getUserContactInfoResponse.ContactInfo, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {

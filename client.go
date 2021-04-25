@@ -2,6 +2,7 @@ package emergencyreporting
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -70,12 +71,12 @@ func (c *Client) init() {
 }
 
 // GenerateToken generates a new token.
-func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
+func (c *Client) GenerateToken(ctx context.Context) (*GenerateTokenResponse, error) {
 	c.init()
 
 	goLiveDate, _ := time.Parse("2006-01-02", "2020-12-06")
 	if !time.Now().After(goLiveDate) {
-		response, err := c.GenerateTokenLegacy()
+		response, err := c.GenerateTokenLegacy(ctx)
 		if err == nil {
 			return response, nil
 		}
@@ -84,7 +85,7 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 		}
 	}
 
-	response, err := c.GenerateToken2020()
+	response, err := c.GenerateToken2020(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (c *Client) GenerateToken() (*GenerateTokenResponse, error) {
 
 // GenerateTokenLegacy generates a token using the legacy workflow.
 // Deprecated; this will no longer work.
-func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
+func (c *Client) GenerateTokenLegacy(ctx context.Context) (*GenerateTokenResponse, error) {
 	c.init()
 
 	targetURL := "https://auth.emergencyreporting.com/Token.php"
@@ -113,7 +114,16 @@ func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 	}
 
 	c.Logger.Printf("POST %s\n", targetURL)
-	response, err := c.client.PostForm(targetURL, values)
+
+	request, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(values.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("Could create request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	request = request.WithContext(ctx)
+
+	response, err := c.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("Could not post form: %w", err)
 	}
@@ -143,7 +153,7 @@ func (c *Client) GenerateTokenLegacy() (*GenerateTokenResponse, error) {
 }
 
 // GenerateToken2020 generates a token using the late-2020 method.
-func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
+func (c *Client) GenerateToken2020(ctx context.Context) (*GenerateTokenResponseV2, error) {
 	c.init()
 
 	tenantHost := "login.emergencyreporting.com"
@@ -171,7 +181,16 @@ func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 	}
 
 	c.Logger.Printf("POST %s\n", targetURL)
-	response, err := c.client.PostForm(targetURL, values)
+
+	request, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(values.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("Could create request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	request = request.WithContext(ctx)
+
+	response, err := c.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("Could not post form: %w", err)
 	}
@@ -201,16 +220,19 @@ func (c *Client) GenerateToken2020() (*GenerateTokenResponseV2, error) {
 }
 
 // RawOperation performs a raw HTTP request.
-func (c *Client) RawOperation(method string, targetURL string, options map[string]string, headers map[string]string, body []byte) (json.RawMessage, error) {
+func (c *Client) RawOperation(ctx context.Context, method string, targetURL string, options map[string]string, headers map[string]string, body []byte) (json.RawMessage, error) {
 	var response json.RawMessage
-	err := c.internalRequest(method, targetURL, options, headers, body, &response)
+	err := c.internalRequest(ctx, method, targetURL, options, headers, body, &response)
 	if err != nil {
 		return nil, err
 	}
 	return response, nil
 }
 
-func (c *Client) internalRequest(method string, targetURL string, options map[string]string, headers map[string]string, body []byte, targetPointer interface{}) error {
+// internalRequest makes an request to the Emergency Reporting API.
+//
+// To set a timeout, pass in a context created with `context.WithTimeout`.
+func (c *Client) internalRequest(ctx context.Context, method string, targetURL string, options map[string]string, headers map[string]string, body []byte, targetPointer interface{}) error {
 	c.init()
 
 	if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
@@ -242,6 +264,9 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 	for key, value := range headers {
 		request.Header.Set(key, value)
 	}
+
+	// Set the context for the request.
+	request = request.WithContext(ctx)
 
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -311,14 +336,14 @@ func (c *Client) internalRequest(method string, targetURL string, options map[st
 
 // GetStations TODO
 // See: https://developer.emergencyreporting.com/docs/services/stations/operations/get-stations?
-func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, error) {
+func (c *Client) GetStations(ctx context.Context, options map[string]string) (*GetStationsResponse, error) {
 	// https://data.emergencyreporting.com/agencystations/stations[?rowVersion][&changesSince][&limit][&offset][&showArchived][&filter]
 
 	targetURL := "/agencystations/stations"
 
 	var parsedResponse GetStationsResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the stations: %w", err)
 	}
@@ -328,14 +353,14 @@ func (c *Client) GetStations(options map[string]string) (*GetStationsResponse, e
 
 // GetIncident TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=getIncident
-func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
+func (c *Client) GetIncident(ctx context.Context, incidentID string) (*GetIncidentResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
 
 	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID)
 
 	var parsedResponse GetIncidentResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the incident: %w", err)
 	}
@@ -345,14 +370,14 @@ func (c *Client) GetIncident(incidentID string) (*GetIncidentResponse, error) {
 
 // GetIncidents TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/getIncidents?
-func (c *Client) GetIncidents(options map[string]string) (*GetIncidentsResponse, error) {
+func (c *Client) GetIncidents(ctx context.Context, options map[string]string) (*GetIncidentsResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/incidents"
 
 	var parsedResponse GetIncidentsResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the incidents: %w", err)
 	}
@@ -362,7 +387,7 @@ func (c *Client) GetIncidents(options map[string]string) (*GetIncidentsResponse,
 
 // PostIncident TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/postIncidents?
-func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) {
+func (c *Client) PostIncident(ctx context.Context, incident Incident) (*PostIncidentResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents[?rowVersion][&limit][&offset][&filter][&orderby]
@@ -381,7 +406,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 
 	var parsedResponse PostIncidentResponse
 
-	err = c.internalRequest(http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create the incident: %w", err)
 	}
@@ -391,7 +416,7 @@ func (c *Client) PostIncident(incident Incident) (*PostIncidentResponse, error) 
 
 // DeleteIncident TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/deleteIncident?
-func (c *Client) DeleteIncident(incidentID string) error {
+func (c *Client) DeleteIncident(ctx context.Context, incidentID string) error {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}
 
 	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID)
@@ -400,7 +425,7 @@ func (c *Client) DeleteIncident(incidentID string) error {
 		"Content-Type": "application/json",
 	}
 
-	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
+	err := c.internalRequest(ctx, http.MethodDelete, targetURL, nil, headers, nil, nil)
 	if err != nil {
 		return fmt.Errorf("Could not delete the incident: %w", err)
 	}
@@ -410,14 +435,14 @@ func (c *Client) DeleteIncident(incidentID string) error {
 
 // GetIncidentExposures TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDGet?
-func (c *Client) GetIncidentExposures(incidentID string, options map[string]string) (*GetExposuresResponse, error) {
+func (c *Client) GetIncidentExposures(ctx context.Context, incidentID string, options map[string]string) (*GetExposuresResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures"
 
 	var parsedResponse GetExposuresResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposures: %w", err)
 	}
@@ -427,14 +452,14 @@ func (c *Client) GetIncidentExposures(incidentID string, options map[string]stri
 
 // GetIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDAndExposureIDGet?
-func (c *Client) GetIncidentExposure(incidentID string, exposureID string) (*GetExposureResponse, error) {
+func (c *Client) GetIncidentExposure(ctx context.Context, incidentID string, exposureID string) (*GetExposureResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
 	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
 
 	var parsedResponse GetExposureResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure: %w", err)
 	}
@@ -444,7 +469,7 @@ func (c *Client) GetIncidentExposure(incidentID string, exposureID string) (*Get
 
 // PostIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDPost?
-func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*PostExposureResponse, error) {
+func (c *Client) PostIncidentExposure(ctx context.Context, incidentID string, exposure Exposure) (*PostExposureResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures
@@ -463,7 +488,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 
 	var parsedResponse PostExposureResponse
 
-	err = c.internalRequest(http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPost, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create the exposure: %w", err)
 	}
@@ -473,7 +498,7 @@ func (c *Client) PostIncidentExposure(incidentID string, exposure Exposure) (*Po
 
 // DeleteIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/IncidentsExposuresByIncidentIDAndExposureIDDelete?
-func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) error {
+func (c *Client) DeleteIncidentExposure(ctx context.Context, incidentID string, exposureID string) error {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
 
 	targetURL := "/agencyincidents/incidents/" + url.PathEscape(incidentID) + "/exposures/" + url.PathEscape(exposureID)
@@ -482,7 +507,7 @@ func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) er
 		"Content-Type": "application/json",
 	}
 
-	err := c.internalRequest(http.MethodDelete, targetURL, nil, headers, nil, nil)
+	err := c.internalRequest(ctx, http.MethodDelete, targetURL, nil, headers, nil, nil)
 	if err != nil {
 		return fmt.Errorf("Could not delete the exposure: %w", err)
 	}
@@ -492,14 +517,14 @@ func (c *Client) DeleteIncidentExposure(incidentID string, exposureID string) er
 
 // GetExposures TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=IncidentsExposuresGet
-func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse, error) {
+func (c *Client) GetExposures(ctx context.Context, options map[string]string) (*GetExposuresResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/incidents/exposures[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/incidents/exposures"
 
 	var parsedResponse GetExposuresResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposures: %w", err)
 	}
@@ -509,7 +534,7 @@ func (c *Client) GetExposures(options map[string]string) (*GetExposuresResponse,
 
 // PatchIncidentExposure TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=IncidentsExposuresByIncidentIDAndExposureIDPatch
-func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, rowVersion string, payload PatchExposureRequest) (*PatchExposureResponse, error) {
+func (c *Client) PatchIncidentExposure(ctx context.Context, incidentID string, exposureID string, rowVersion string, payload PatchExposureRequest) (*PatchExposureResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/incidents/{incidentID}/exposures/{exposureID}
@@ -529,7 +554,7 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 
 	var parsedResponse PatchExposureResponse
 
-	err = c.internalRequest(http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not patch the exposure: %w", err)
 	}
@@ -539,14 +564,14 @@ func (c *Client) PatchIncidentExposure(incidentID string, exposureID string, row
 
 // GetExposureLocation TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresLocationByExposureIDGet?
-func (c *Client) GetExposureLocation(exposureID string) (*GetExposureLocationResponse, error) {
+func (c *Client) GetExposureLocation(ctx context.Context, exposureID string) (*GetExposureLocationResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/location[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/location"
 
 	var parsedResponse GetExposureLocationResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure location: %w", err)
 	}
@@ -556,7 +581,7 @@ func (c *Client) GetExposureLocation(exposureID string) (*GetExposureLocationRes
 
 // PutExposureLocation TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresLocationByExposureIDGet?
-func (c *Client) PutExposureLocation(exposureID string, location ExposureLocation) (*PutExposureLocationResponse, error) {
+func (c *Client) PutExposureLocation(ctx context.Context, exposureID string, location ExposureLocation) (*PutExposureLocationResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/location[?rowVersion][&limit][&offset][&filter][&orderby]
@@ -576,7 +601,7 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 
 	var parsedResponse PutExposureLocationResponse
 
-	err = c.internalRequest(http.MethodPut, targetURL, nil, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPut, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not put the exposure location: %w", err)
 	}
@@ -586,14 +611,14 @@ func (c *Client) PutExposureLocation(exposureID string, location ExposureLocatio
 
 // GetExposureFire TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresFireByExposureIDGet?
-func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, error) {
+func (c *Client) GetExposureFire(ctx context.Context, exposureID string) (*GetExposureFireResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/fire[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/fire"
 
 	var parsedResponse GetExposureFireResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		if err == ErrorNotFound {
 			return nil, err
@@ -606,14 +631,14 @@ func (c *Client) GetExposureFire(exposureID string) (*GetExposureFireResponse, e
 
 // GetExposureApparatuses TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresApparatusesByExposureIDGet?
-func (c *Client) GetExposureApparatuses(exposureID string) (*GetExposureApparatusesResponse, error) {
+func (c *Client) GetExposureApparatuses(ctx context.Context, exposureID string) (*GetExposureApparatusesResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/apparatuses[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/apparatuses"
 
 	var parsedResponse GetExposureApparatusesResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure apparatuses: %w", err)
 	}
@@ -623,7 +648,7 @@ func (c *Client) GetExposureApparatuses(exposureID string) (*GetExposureApparatu
 
 // PostExposureApparatus TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresApparatusesByExposureIDPost?
-func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureApparatus) (*PostExposureApparatusResponse, error) {
+func (c *Client) PostExposureApparatus(ctx context.Context, exposureID string, apparatus ExposureApparatus) (*PostExposureApparatusResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/apparatuses[?useAssociatedAgencyApparatusID]
@@ -645,7 +670,7 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 
 	var parsedResponse PostExposureApparatusResponse
 
-	err = c.internalRequest(http.MethodPost, targetURL, options, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPost, targetURL, options, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create the apparatus: %w", err)
 	}
@@ -655,14 +680,14 @@ func (c *Client) PostExposureApparatus(exposureID string, apparatus ExposureAppa
 
 // GetExposureMember TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-incidents&operation=ExposuresCrewmembersByExposureIDAndExposureUserIDGet
-func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*GetExposureMemberResponse, error) {
+func (c *Client) GetExposureMember(ctx context.Context, exposureID string, exposureUserID string) (*GetExposureMemberResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers/{exposureUserID}
 
 	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers/" + url.PathEscape(exposureUserID)
 
 	var parsedResponse GetExposureMemberResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure members: %w", err)
 	}
@@ -672,14 +697,14 @@ func (c *Client) GetExposureMember(exposureID string, exposureUserID string) (*G
 
 // GetExposureMembers TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/ExposuresCrewmembersByExposureIDGet?
-func (c *Client) GetExposureMembers(exposureID string, options map[string]string) (*GetExposureMembersResponse, error) {
+func (c *Client) GetExposureMembers(ctx context.Context, exposureID string, options map[string]string) (*GetExposureMembersResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/exposures/{exposureID}/crewmembers[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/exposures/" + url.PathEscape(exposureID) + "/crewmembers"
 
 	var parsedResponse GetExposureMembersResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure members: %w", err)
 	}
@@ -689,14 +714,14 @@ func (c *Client) GetExposureMembers(exposureID string, options map[string]string
 
 // GetExposureMemberRoles TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-incidents/operations/CrewmembersRolesByExposureUserIDGet?
-func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
+func (c *Client) GetExposureMemberRoles(ctx context.Context, exposureUserID string, options map[string]string) (*GetExposureMemberRolesResponse, error) {
 	// https://data.emergencyreporting.com/agencyincidents/crewmembers/{exposureUserID}/roles[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyincidents/crewmembers/" + url.PathEscape(exposureUserID) + "/roles"
 
 	var parsedResponse GetExposureMemberRolesResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the exposure member roles: %w", err)
 	}
@@ -706,7 +731,7 @@ func (c *Client) GetExposureMemberRoles(exposureUserID string, options map[strin
 
 // GetUsers TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersGet?
-func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) {
+func (c *Client) GetUsers(ctx context.Context, options map[string]string) (*GetUsersResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users[?rowVersion][&limit][&offset][&filter][&orderby]
 
 	targetURL := "/agencyusers/users"
@@ -715,7 +740,7 @@ func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) 
 
 	var parsedResponse GetUsersResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the users: %w", err)
 	}
@@ -725,7 +750,7 @@ func (c *Client) GetUsers(options map[string]string) (*GetUsersResponse, error) 
 
 // GetUser TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersByUserIDGet?
-func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
+func (c *Client) GetUser(ctx context.Context, userID string) (*GetUserResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}
 
 	targetURL := "/agencyusers/users/" + url.PathEscape(userID)
@@ -735,7 +760,7 @@ func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 
 	var parsedResponse GetUserResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, headers, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the user: %w", err)
 	}
@@ -745,14 +770,14 @@ func (c *Client) GetUser(userID string) (*GetUserResponse, error) {
 
 // GetUserContactInfo TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersContactinfoByUserIDGet?
-func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse, error) {
+func (c *Client) GetUserContactInfo(ctx context.Context, userID string) (*GetUserContactInfoResponse, error) {
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}/contactinfo
 
 	targetURL := "/agencyusers/users/" + url.PathEscape(userID) + "/contactinfo"
 
 	var parsedResponse GetUserContactInfoResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the user contact info: %w", err)
 	}
@@ -762,7 +787,7 @@ func (c *Client) GetUserContactInfo(userID string) (*GetUserContactInfoResponse,
 
 // PatchUser TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-users/operations/V1UsersByUserIDPatch?
-func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRequest) (*PatchUserResponse, error) {
+func (c *Client) PatchUser(ctx context.Context, userID string, rowVersion string, payload PatchUserRequest) (*PatchUserResponse, error) {
 	c.init()
 
 	// https://data.emergencyreporting.com/agencyusers/users/{userID}
@@ -782,7 +807,7 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 
 	var parsedResponse PatchUserResponse
 
-	err = c.internalRequest(http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
+	err = c.internalRequest(ctx, http.MethodPatch, targetURL, nil, headers, jsonInput, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not patch the user: %w", err)
 	}
@@ -792,14 +817,14 @@ func (c *Client) PatchUser(userID string, rowVersion string, payload PatchUserRe
 
 // GetApparatus TODO
 // See: https://developer.emergencyreporting.com/api-details#api=agency-apparatus&operation=ApparatusByDepartmentApparatusIDGet
-func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error) {
+func (c *Client) GetApparatus(ctx context.Context, apparatusID string) (*GetApparatusResponse, error) {
 	// https://data.emergencyreporting.com/agencyapparatus/apparatus/{departmentApparatusID}
 
 	targetURL := "/agencyapparatus/apparatus/" + url.PathEscape(apparatusID)
 
 	var parsedResponse GetApparatusResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, nil, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the apparatuses: %w", err)
 	}
@@ -809,14 +834,14 @@ func (c *Client) GetApparatus(apparatusID string) (*GetApparatusResponse, error)
 
 // GetApparatuses TODO
 // See: https://developer.emergencyreporting.com/docs/services/agency-apparatus/operations/ApparatusGet?
-func (c *Client) GetApparatuses(options map[string]string) (*GetApparatusesResponse, error) {
+func (c *Client) GetApparatuses(ctx context.Context, options map[string]string) (*GetApparatusesResponse, error) {
 	// https://data.emergencyreporting.com/agencyapparatus/apparatus[?limit][&offset][&filter][&orderby][&rowVersion]
 
 	targetURL := "/agencyapparatus/apparatus"
 
 	var parsedResponse GetApparatusesResponse
 
-	err := c.internalRequest(http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
+	err := c.internalRequest(ctx, http.MethodGet, targetURL, options, nil, nil, &parsedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get the apparatuses: %w", err)
 	}
