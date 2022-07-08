@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/tekkamanendless/emergencyreporting"
 )
@@ -370,7 +371,8 @@ Example filter: 'stationNumber eq 2'
 
 	err := rootCommand.Execute()
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not execute root comamand: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	os.Exit(0)
 }
@@ -437,7 +439,8 @@ func doRaw(cmd *cobra.Command, args []string, method string, parameters []string
 	targetURL := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	optionsMap := map[string]string{}
@@ -458,12 +461,14 @@ func doRaw(cmd *cobra.Command, args []string, method string, parameters []string
 
 	response, err := client.RawOperation(ctx, method, targetURL, optionsMap, headersMap, []byte(contents))
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not perform raw operation: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(response, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -473,22 +478,26 @@ func doApparatusGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing apparatus ID")
+		logrus.Errorf("Missing apparatus ID")
+		os.Exit(1)
 	}
 	apparatusID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	apparatusResponse, err := client.GetApparatus(ctx, apparatusID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get apparatus: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(apparatusResponse.Apparatus, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -503,7 +512,8 @@ func doApparatusList(cmd *cobra.Command, args []string) {
 		args = args[1:]
 	}
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -512,11 +522,13 @@ func doApparatusList(cmd *cobra.Command, args []string) {
 	}
 	apparatusesResponse, err := client.GetApparatuses(ctx, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get apparatuses: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(apparatusesResponse.Apparatuses, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -526,26 +538,31 @@ func doIncidentCreate(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing JSON")
+		logrus.Errorf("Missing JSON")
+		os.Exit(1)
 	}
 	jsonString := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var incident emergencyreporting.Incident
 	err := json.Unmarshal([]byte(jsonString), &incident)
 	if err != nil {
-		panic(fmt.Errorf("could not parse JSON: %v", err))
+		logrus.Errorf("Could not parse JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	postIncidentResponse, err := client.PostIncident(ctx, incident)
 	if err != nil {
-		panic(fmt.Errorf("could not create incident: %v", err))
+		logrus.Errorf("Could not create incident: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(postIncidentResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -557,7 +574,8 @@ func doIncidentDelete(cmd *cobra.Command, args []string) {
 	for _, incidentID := range args {
 		err := client.DeleteIncident(ctx, incidentID)
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Could not delete incident '%s': [%T] %v", incidentID, err, err)
+			os.Exit(1)
 		}
 	}
 }
@@ -567,22 +585,26 @@ func doIncidentGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	incidentResponse, err := client.GetIncident(ctx, incidentID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get incident '%s': [%T] %v", incidentID, err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(incidentResponse.Incident, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -597,7 +619,8 @@ func doIncidentList(cmd *cobra.Command, args []string) {
 		args = args[1:]
 	}
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -607,11 +630,13 @@ func doIncidentList(cmd *cobra.Command, args []string) {
 
 	incidentsResponse, err := client.GetIncidents(ctx, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get incidents: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(incidentsResponse.Incidents, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -621,30 +646,36 @@ func doIncidentExposureCreate(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	if len(args) < 2 {
-		panic("Missing JSON")
+		logrus.Errorf("Missing JSON")
+		os.Exit(1)
 	}
 	jsonString := args[1]
 	args = args[2:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var exposure emergencyreporting.Exposure
 	err := json.Unmarshal([]byte(jsonString), &exposure)
 	if err != nil {
-		panic(fmt.Errorf("could not parse JSON: %v", err))
+		logrus.Errorf("Could not parse JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	postExposureResponse, err := client.PostIncidentExposure(ctx, incidentID, exposure)
 	if err != nil {
-		panic(fmt.Errorf("could not create exposure: %v", err))
+		logrus.Errorf("Could not create exposure: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(postExposureResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -654,21 +685,25 @@ func doIncidentExposureDelete(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	if len(args) < 2 {
-		panic("Missing exposure ID")
+		logrus.Errorf("Missing exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[1]
 	args = args[2:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	err := client.DeleteIncidentExposure(ctx, incidentID, exposureID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not delete exposure: [%T] %v", err, err)
+		os.Exit(1)
 	}
 }
 
@@ -682,7 +717,8 @@ func doExposureList(cmd *cobra.Command, args []string) {
 		args = args[1:]
 	}
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -692,12 +728,14 @@ func doExposureList(cmd *cobra.Command, args []string) {
 
 	exposuresResponse, err := client.GetExposures(ctx, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposures: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(exposuresResponse.Exposures, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -707,26 +745,31 @@ func doIncidentExposureGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	if len(args) < 2 {
-		panic("Missing exposure ID")
+		logrus.Errorf("Missing exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[1]
 	args = args[2:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	exposureResponse, err := client.GetIncidentExposure(ctx, incidentID, exposureID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposure: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(exposureResponse.Exposure, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -736,7 +779,8 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) == 0 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	args = args[1:]
@@ -748,7 +792,8 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 	}
 
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -758,12 +803,14 @@ func doIncidentExposureList(cmd *cobra.Command, args []string) {
 
 	exposuresResponse, err := client.GetIncidentExposures(ctx, incidentID, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposures: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(exposuresResponse.Exposures, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -773,27 +820,32 @@ func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	incidentID := args[0]
 	if len(args) < 2 {
-		panic("Missing exposure ID")
+		logrus.Errorf("Missing exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[1]
 	if len(args) < 3 {
-		panic("Missing incident ID")
+		logrus.Errorf("Missing incident ID")
+		os.Exit(1)
 	}
 	contents := args[2]
 	args = args[3:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var currentExposure *emergencyreporting.Exposure
 	{
 		exposureResponse, err := client.GetIncidentExposure(ctx, incidentID, exposureID)
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Could not get exposure: [%T] %v", err, err)
+			os.Exit(1)
 		}
 		currentExposure = exposureResponse.Exposure
 	}
@@ -805,17 +857,20 @@ func doIncidentExposurePatch(cmd *cobra.Command, args []string) {
 	var patchExposureRequest emergencyreporting.PatchExposureRequest
 	err := json.Unmarshal([]byte(contents), &patchExposureRequest)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not parse JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	patchExposureResponse, err := client.PatchIncidentExposure(ctx, incidentID, exposureID, currentExposure.RowVersion, patchExposureRequest)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error patching exposure: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(patchExposureResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -825,22 +880,26 @@ func doExposureLocationGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing argument: exposure ID")
+		logrus.Errorf("Missing argument: exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	response, err := client.GetExposureLocation(ctx, exposureID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposure location: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(response.Location, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -850,26 +909,31 @@ func doExposureMemberGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing exposure ID")
+		logrus.Errorf("Missing exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[0]
 	if len(args) < 2 {
-		panic("Missing exposure user ID")
+		logrus.Errorf("Missing exposure user ID")
+		os.Exit(1)
 	}
 	exposureUserID := args[1]
 	args = args[2:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	memberResponse, err := client.GetExposureMember(ctx, exposureID, exposureUserID)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposure member: [%T] %v", err, err)
+		os.Exit(1)
 	}
 
 	jsonBytes, err := json.MarshalIndent(memberResponse.CrewMember, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -879,12 +943,14 @@ func doExposureMemberList(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing exposure ID")
+		logrus.Errorf("Missing exposure ID")
+		os.Exit(1)
 	}
 	exposureID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -893,11 +959,13 @@ func doExposureMemberList(cmd *cobra.Command, args []string) {
 
 	membersResponse, err := client.GetExposureMembers(ctx, exposureID, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposure members: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(membersResponse.CrewMembers, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -907,12 +975,14 @@ func doExposureUserRoleList(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing exposure user ID")
+		logrus.Errorf("Missing exposure user ID")
+		os.Exit(1)
 	}
 	exposureUserID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -921,11 +991,13 @@ func doExposureUserRoleList(cmd *cobra.Command, args []string) {
 
 	rolesResponse, err := client.GetExposureMemberRoles(ctx, exposureUserID, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get exposure member roles: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(rolesResponse.Roles, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -935,19 +1007,22 @@ func doStationGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing filter")
+		logrus.Errorf("Missing filter")
+		os.Exit(1)
 	}
 	filter := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var currentStation *emergencyreporting.Station
 	{
 		apparatusesResponse, err := client.GetStations(ctx, map[string]string{"filter": filter})
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Could not get stations: [%T] %v", err, err)
+			os.Exit(1)
 		}
 		if len(apparatusesResponse.Stations) > 0 {
 			currentStation = apparatusesResponse.Stations[0]
@@ -959,7 +1034,8 @@ func doStationGet(cmd *cobra.Command, args []string) {
 	} else {
 		jsonBytes, err := json.MarshalIndent(currentStation, "" /*prefix*/, "\t" /*indent*/)
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+			os.Exit(1)
 		}
 		fmt.Println(string(jsonBytes))
 	}
@@ -975,7 +1051,8 @@ func doStationList(cmd *cobra.Command, args []string) {
 		args = args[1:]
 	}
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -984,11 +1061,13 @@ func doStationList(cmd *cobra.Command, args []string) {
 	}
 	stationsResponse, err := client.GetStations(ctx, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get stations: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(stationsResponse.Stations, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -998,19 +1077,22 @@ func doUserGet(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing user ID")
+		logrus.Errorf("Missing user ID")
+		os.Exit(1)
 	}
 	userID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var currentUser *emergencyreporting.User
 	{
 		userResponse, err := client.GetUser(ctx, userID)
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Could not get user: [%T] %v", err, err)
+			os.Exit(1)
 		}
 		currentUser = userResponse.User
 	}
@@ -1020,7 +1102,8 @@ func doUserGet(cmd *cobra.Command, args []string) {
 	}
 	jsonBytes, err := json.MarshalIndent(currentUser, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -1030,32 +1113,38 @@ func doUserPatch(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missing user ID")
+		logrus.Errorf("Missing user ID")
+		os.Exit(1)
 	}
 	userID := args[0]
 
 	if len(args) < 2 {
-		panic("Missing operation")
+		logrus.Errorf("Missing operation")
+		os.Exit(1)
 	}
 	operation := args[1]
 	if len(args) < 3 {
-		panic("Missing path")
+		logrus.Errorf("Missing path")
+		os.Exit(1)
 	}
 	path := args[2]
 	if len(args) < 4 {
-		panic("Missing value")
+		logrus.Errorf("Missing value")
+		os.Exit(1)
 	}
 	value := args[3]
 	args = args[4:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	var currentUser *emergencyreporting.User
 	{
 		userResponse, err := client.GetUser(ctx, userID)
 		if err != nil {
-			panic(err)
+			logrus.Errorf("Could not get user: [%T] %v", err, err)
+			os.Exit(1)
 		}
 		currentUser = userResponse.User
 	}
@@ -1073,11 +1162,13 @@ func doUserPatch(cmd *cobra.Command, args []string) {
 	}
 	patchResponse, err := client.PatchUser(ctx, currentUser.UserID, currentUser.RowVersion, patchUserRequest)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not patch user: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(patchResponse, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -1092,7 +1183,8 @@ func doUserList(cmd *cobra.Command, args []string) {
 		args = args[1:]
 	}
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	options := map[string]string{
@@ -1101,11 +1193,13 @@ func doUserList(cmd *cobra.Command, args []string) {
 	}
 	usersResponse, err := client.GetUsers(ctx, options)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Could not get users: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(usersResponse.Users, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
@@ -1115,21 +1209,25 @@ func doUserContactInfoID(cmd *cobra.Command, args []string) {
 	client := makeClient(cmd)
 
 	if len(args) < 1 {
-		panic("Missin guser ID")
+		logrus.Errorf("Missin guser ID")
+		os.Exit(1)
 	}
 	userID := args[0]
 	args = args[1:]
 	if len(args) > 0 {
-		panic("Too many arguments")
+		logrus.Errorf("Too many arguments")
+		os.Exit(1)
 	}
 
 	getUserContactInfoResponse, err := client.GetUserContactInfo(ctx, userID)
 	if err != nil {
-		panic(fmt.Errorf("could not get user contact info for user ID %s: %v", userID, err))
+		logrus.Errorf("Could not get user contact info for user ID %s: [%T] %v", userID, err, err)
+		os.Exit(1)
 	}
 	jsonBytes, err := json.MarshalIndent(getUserContactInfoResponse.ContactInfo, "" /*prefix*/, "\t" /*indent*/)
 	if err != nil {
-		panic(err)
+		logrus.Errorf("Error writing JSON: [%T] %v", err, err)
+		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
 }
